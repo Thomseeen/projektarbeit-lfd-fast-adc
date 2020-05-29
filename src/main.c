@@ -6,11 +6,15 @@
 #include "adc_reading.h"
 #include "config.h"
 #include "libpruio/pruio.h"
+#include "log.h"
 
 /********************************************************************************
  * MAIN
  ********************************************************************************/
 int main(int argc, char** argv) {
+  /* Set logger level */
+  log_set_level(LOG_DEBUG);
+
   /* Build configuration for pruio */
   uint16_t config_pruio_subsystems;
   config_pruio_subsystems = CONFIG_PRU_NO ? PRUIO_ACT_PRU1 : 0;
@@ -22,7 +26,7 @@ int main(int argc, char** argv) {
   /* Setup PRUIO driver */
   if (pruio_config(io, CONFIG_ADC_RB_SAMPLES_PER_PORT, CONFIG_ADC_PIN_MASK, CONFIG_ADC_TMR,
                    CONFIG_ADC_ENCODING)) {
-    fprintf(stderr, "FATAL: PRUIO config failed (%s). Exiting...\n", io->Errr);
+    log_fatal("PRUIO config failed (%s). Exiting...", io->Errr);
     exit(-1);
   }
 
@@ -31,15 +35,15 @@ int main(int argc, char** argv) {
 
   /* Start rb-mode */
   if (pruio_rb_start(io)) {
-    fprintf(stderr, "FATAL: PRUIO rb mode start failed (%s). Exiting...\n", io->Errr);
+    log_fatal("PRUIO rb mode start failed (%s). Exiting...", io->Errr);
     exit(-1);
   }
 
   uint32_t adc_rb_samples_wraparound = io->Adc->Samples;
   uint8_t adc_active_pin_cnt = io->Adc->ChAz;
 
-  printf("INFO: Number of active steps: %i\n", adc_rb_samples_wraparound);
-  printf("INFO: Number of samples: %i\n", adc_active_pin_cnt);
+  log_info("Number of active steps: %i", adc_rb_samples_wraparound);
+  log_info("Number of samples: %i", adc_active_pin_cnt);
 
   /* Init counters */
   int32_t sample_cnt_last = -1;
@@ -53,17 +57,17 @@ int main(int argc, char** argv) {
   while (1) {
     /* Wait till rb-mode starts */
     if (io->DRam[0] == PRUIO_MSG_MM_WAIT || io->DRam[0] == PRUIO_MSG_MM_TRG1) {
-      printf("INFO: Waiting for RB-mode to start\n");
+      log_info("Waiting for RB-mode to start");
       while (io->DRam[0] == PRUIO_MSG_MM_WAIT || io->DRam[0] == PRUIO_MSG_MM_TRG1) {
         ;
       }
-      printf("INFO: RB-mode started\n");
+      log_info("RB-mode started");
     }
     /* Actual sampling */
     else {
       int32_t sample_cnt_current = io->DRam[0];
       if (sample_cnt_current != sample_cnt_last) {
-        printf("DEBUG: ----- New Values -----\n");
+        log_trace("----- New Values -----");
 
         int32_t start_index, end_index;
         /* Wrap-around handling rb - no wrap-around yet */
@@ -83,10 +87,10 @@ int main(int argc, char** argv) {
         }
 
         if (sample_cnt_current < sample_cnt_last)
-          printf("DEBUG: Wrap-around occured\n");
+          log_trace("Wrap-around occured");
 
-        printf("DEBUG: sample_cnt_last %i, sample_cnt_current %i, start_index %i, end_index %i\n",
-               sample_cnt_last, sample_cnt_current, start_index, end_index);
+        log_trace("sample_cnt_last %i, sample_cnt_current %i, start_index %i, end_index %i",
+                  sample_cnt_last, sample_cnt_current, start_index, end_index);
 
         /* Write all new samples into measurements buffer */
         for (int ii = start_index + 1; ii <= end_index; ii++) {
@@ -94,13 +98,13 @@ int main(int argc, char** argv) {
 
           /*
           if (!measurements_buffer[host_adc_buffer_indexer].sent_flag) {
-            printf("WARNING: Dropped measurement pin %i at seq_no %i",
+            log_warn("Dropped measurement pin %i at seq_no %i",
                    measurements_buffer[host_adc_buffer_indexer].pin_no,
                    measurements_buffer[host_adc_buffer_indexer].seq_no);
           }
           */
 
-          printf("DEBUG: Writing to host buffer at idx %i\n", host_adc_buffer_indexer);
+          log_debug("Writing to host buffer at idx %i", host_adc_buffer_indexer);
 
           measurements_buffer[host_adc_buffer_indexer].pin_no = pin_no;
           measurements_buffer[host_adc_buffer_indexer].value = io->Adc->Value[ii];
@@ -127,6 +131,7 @@ int main(int argc, char** argv) {
     }
   }
 
+  log_info("Destroying PRUIO driver structure");
   pruio_destroy(io);
 
   exit(0);

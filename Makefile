@@ -3,7 +3,7 @@
 ########################################
 # Compiler settings
 CC = gcc
-CXXFLAGS = -Wall
+CXXFLAGS = -Wall -DLOG_USE_COLOR
 LDFLAGS = -lpruio
 
 # Makefile settings
@@ -19,6 +19,7 @@ OBJDIR = obj
 SRC = $(wildcard $(SRCDIR)/*$(EXT))
 OBJ = $(SRC:$(SRCDIR)/%$(EXT)=$(OBJDIR)/%.o)
 DEP = $(OBJ:$(OBJDIR)/%.o=%.d)
+
 # UNIX-based OS variables & settings
 RM = rm
 DELOBJ = $(OBJ)
@@ -40,13 +41,18 @@ $(APPNAME): $(OBJ)
 # Includes all .h files
 -include $(DEP)
 
-# Building rule for .o files and its .c/.cpp in combination with all .h
+# Building rule for .o files and its .c in combination with all .h
 $(OBJDIR)/%.o: $(SRCDIR)/%$(EXT)
 	$(CC) $(CXXFLAGS) -o $@ -c $<
 
-################### Cleaning rules for Unix-based OS ###################
 # Cleans complete project
-.PHONY: clear
+.PHONY: clean
 clean:
 	$(RM) $(DELOBJ) $(DEP) $(APPNAME)
 	@printf "### Cleaned ###\n\n"
+
+# Make symlinks to libraries
+.PHONY: symlib
+symlib:
+	cd src/; ln -s ../lib/log.c/src/log.h log.h
+	cd src/; ln -s ../lib/log.c/src/log.c log.c
