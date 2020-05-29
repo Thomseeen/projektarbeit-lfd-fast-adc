@@ -1,0 +1,5 @@
+# Build artifacts
+obj/
+*.o
+*.d
+projektarbeit-lfd-fast-adc
