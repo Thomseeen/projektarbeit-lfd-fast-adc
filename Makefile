@@ -4,7 +4,7 @@
 # Compiler settings
 CC = gcc
 CXXFLAGS = -Wall -DLOG_USE_COLOR
-LDFLAGS = -lpruio
+LDFLAGS = -lpruio -lpthread -l paho-mqtt3c
 
 # Makefile settings
 APPNAME = $(notdir $(abspath .))

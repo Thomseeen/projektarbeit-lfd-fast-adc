@@ -1,3 +1,4 @@
+#include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,6 +8,18 @@
 #include "config.h"
 #include "libpruio/pruio.h"
 #include "log.h"
+
+/********************************************************************************
+ * MQTT-Handler
+ ********************************************************************************/
+void* MqttHandler(void* arg) {
+  log_info("MQTT Handler thread has been started");
+  /* ~28ns per loop */
+  for (uint64_t ii = 0; ii < 1000000000; ii++)
+    ;
+  log_info("MQTT Handler thread terminates");
+  pthread_exit(NULL);
+}
 
 /********************************************************************************
  * MAIN
@@ -32,6 +45,18 @@ int main(int argc, char** argv) {
 
   /* Build measurements buffer */
   AdcReading measurements_buffer[CONFIG_HOST_ADC_BUFFER_SIZE];
+  /* Set all status flags to initialized */
+  for (uint32_t ii = 0; ii < CONFIG_HOST_ADC_BUFFER_SIZE; ii++) {
+    measurements_buffer[ii].status_flag = 3;
+  }
+
+  /* Start MQTT-Handler thread */
+  pthread_t mqtt_handler_thread_id;
+  int rc = pthread_create(&mqtt_handler_thread_id, NULL, MqttHandler, NULL);
+  if (rc) {
+    log_fatal("Unable to create MQTT-Handler thread, %d", rc);
+    exit(-1);
+  }
 
   /* Start rb-mode */
   if (pruio_rb_start(io)) {
@@ -49,7 +74,7 @@ int main(int argc, char** argv) {
   int32_t sample_cnt_last = -1;
   uint32_t host_adc_buffer_indexer = 0;
   uint64_t seq_numbers[adc_active_pin_cnt];
-  for (int ii = 0; ii < adc_active_pin_cnt; ii++) {
+  for (uint8_t ii = 0; ii < adc_active_pin_cnt; ii++) {
     seq_numbers[ii] = 0;
   }
 
@@ -87,29 +112,29 @@ int main(int argc, char** argv) {
         }
 
         if (sample_cnt_current < sample_cnt_last)
-          log_trace("Wrap-around occured");
+          log_trace("Wrap-around occured in rb");
 
         log_trace("sample_cnt_last %i, sample_cnt_current %i, start_index %i, end_index %i",
                   sample_cnt_last, sample_cnt_current, start_index, end_index);
 
         /* Write all new samples into measurements buffer */
-        for (int ii = start_index + 1; ii <= end_index; ii++) {
+        for (int32_t ii = start_index + 1; ii <= end_index; ii++) {
           uint8_t pin_no = ii % adc_active_pin_cnt;
 
           /*
-          if (!measurements_buffer[host_adc_buffer_indexer].sent_flag) {
+          if (!measurements_buffer[host_adc_buffer_indexer].status_flag) {
             log_warn("Dropped measurement pin %i at seq_no %i",
                    measurements_buffer[host_adc_buffer_indexer].pin_no,
                    measurements_buffer[host_adc_buffer_indexer].seq_no);
           }
           */
 
-          log_debug("Writing to host buffer at idx %i", host_adc_buffer_indexer);
+          log_trace("Writing to host buffer at idx %i", host_adc_buffer_indexer);
 
           measurements_buffer[host_adc_buffer_indexer].pin_no = pin_no;
           measurements_buffer[host_adc_buffer_indexer].value = io->Adc->Value[ii];
           measurements_buffer[host_adc_buffer_indexer].seq_no = seq_numbers[pin_no];
-          measurements_buffer[host_adc_buffer_indexer].sent_flag = 0;
+          measurements_buffer[host_adc_buffer_indexer].status_flag = 0;
 
           /* Handling wrap-arounds */
           /* Wrap-round handling seq_no */
@@ -127,6 +152,14 @@ int main(int argc, char** argv) {
         }
         /* Wrap-around handling rb - if wrap-around, start next round reading from 0 */
         sample_cnt_last = end_index;
+
+        /* Count sample to be sent */
+        uint32_t unsent_measurement_cnt = 0;
+        for (uint32_t jj = 0; jj < CONFIG_HOST_ADC_BUFFER_SIZE; jj++) {
+          unsent_measurement_cnt += measurements_buffer[jj].status_flag ? 0 : 1;
+        }
+        // if (unsent_measurement_cnt)
+        log_debug("%i unsent measurements in host buffer", unsent_measurement_cnt);
       }
     }
   }
