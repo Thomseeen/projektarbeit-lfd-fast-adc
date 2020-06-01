@@ -4,4 +4,5 @@ Analog readings will then be published using MQTT (and maybe to shared memory fo
 This tool is supposed to be CLI-only and configured via config-files.
 
 Libraries in use:
-libpruio - https://github.com/DTJF/libpruio
+* libpruio - https://github.com/DTJF/libpruio
+* rxi's log.c - https://github.com/rxi/log.c
