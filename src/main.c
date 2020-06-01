@@ -70,6 +70,18 @@ int main(int argc, char** argv) {
   log_info("Number of active steps: %i", adc_rb_samples_wraparound);
   log_info("Number of samples: %i", adc_active_pin_cnt);
 
+  /* Calculate actual active AIN numbers */
+  uint8_t adc_active_pins[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+  for (uint8_t ii = 1, jj = 0; ii <= LFD_MAX_ADC_PINS; ii++) {
+    if ((CONFIG_ADC_PIN_MASK >> ii) & 0xFF1) {
+      adc_active_pins[jj] = ii - 1;
+      jj++;
+    }
+  }
+  for (uint8_t ii = 0; ii < adc_active_pin_cnt; ii++) {
+    log_info("Active pin %i: AIN%i", ii, adc_active_pins[ii]);
+  }
+
   /* Init counters */
   int32_t sample_cnt_last = -1;
   uint32_t host_adc_buffer_indexer = 0;
@@ -121,7 +133,7 @@ int main(int argc, char** argv) {
         for (int32_t ii = start_index + 1; ii <= end_index; ii++) {
           uint8_t pin_no = ii % adc_active_pin_cnt;
 
-          /*
+          /* Check whether measurements have been dropped
           if (!measurements_buffer[host_adc_buffer_indexer].status_flag) {
             log_warn("Dropped measurement pin %i at seq_no %i",
                    measurements_buffer[host_adc_buffer_indexer].pin_no,
@@ -131,7 +143,7 @@ int main(int argc, char** argv) {
 
           log_trace("Writing to host buffer at idx %i", host_adc_buffer_indexer);
 
-          measurements_buffer[host_adc_buffer_indexer].pin_no = pin_no;
+          measurements_buffer[host_adc_buffer_indexer].pin_no = adc_active_pins[pin_no];
           measurements_buffer[host_adc_buffer_indexer].value = io->Adc->Value[ii];
           measurements_buffer[host_adc_buffer_indexer].seq_no = seq_numbers[pin_no];
           measurements_buffer[host_adc_buffer_indexer].status_flag = 0;

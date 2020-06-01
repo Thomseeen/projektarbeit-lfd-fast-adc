@@ -23,8 +23,8 @@
 #define CONFIG_ADC_TMR 1000000000  // 1s or 1Hz
 /* By how many bits should the 12Bit ADC-values be padded? */
 #define CONFIG_ADC_ENCODING 4  // 16bit
-/* Bit mask for active AIN - LSB is charge up, ignore -> Bit 1 is AIN0, Bit 2 is AIN1, ... */
-#define CONFIG_ADC_PIN_MASK 0b000000110
+/* Bit mask for active AIN - LSB is charge up -> ignore, Bit 1 is AIN0, Bit 2 is AIN1, ... */
+#define CONFIG_ADC_PIN_MASK 0b000100110
 /* How many samples to fetch in one go per active AIN before ring buffer wrap around */
 #define CONFIG_ADC_RB_SAMPLES_PER_PORT 3
 
@@ -36,5 +36,7 @@
  ********************************************************************************/
 /* Maximum samples the PRUSS drivers memory can hold for the ADC's ring buffer */
 #define LFD_MAX_ADC_BUFFER_SAMPLES 128000
+/* Maximum available AIN count */
+#define LFD_MAX_ADC_PINS 8
 
 #endif /* CONFIG_H */
