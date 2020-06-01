@@ -36,7 +36,7 @@ int main(int argc, char** argv) {
   }
 
   /* Set all status flags to initialized */
-  const AdcReading AdcReading_default = {0, 0, 0, 4};
+  const AdcReading AdcReading_default = {0, 0, 0, 0, ADC_READ_INITIALIZED};
   pthread_mutex_lock(&measurements_buffer_lock);
   for (uint32_t ii = 0; ii < CONFIG_HOST_ADC_BUFFER_SIZE; ii++) {
     measurements_buffer[ii] = AdcReading_default;
@@ -126,15 +126,16 @@ int main(int argc, char** argv) {
         for (int32_t ii = start_index + 1; ii <= end_index; ii++) {
           uint8_t pin_no = ii % adc_active_pin_cnt;
 
-          /* TODO: Check whether measurements have been dropped
+          /* TODO: Check whether measurements have been dropped */
           pthread_mutex_lock(&measurements_buffer_lock);
-          if (!measurements_buffer[host_adc_buffer_indexer].status_flag) {
-            log_warn("Dropped measurement pin %i at seq_no %i",
-                   measurements_buffer[host_adc_buffer_indexer].pin_no,
-                   measurements_buffer[host_adc_buffer_indexer].seq_no);
+          if (measurements_buffer[host_adc_buffer_indexer].status != ADC_READ_SENT &&
+              measurements_buffer[host_adc_buffer_indexer].status != ADC_READ_INITIALIZED) {
+            log_warn("Dropped measurement pin %i at seq_no %i with status %i",
+                     measurements_buffer[host_adc_buffer_indexer].pin_no,
+                     measurements_buffer[host_adc_buffer_indexer].seq_no,
+                     measurements_buffer[host_adc_buffer_indexer].status);
           }
           pthread_mutex_unlock(&measurements_buffer_lock);
-          */
 
           log_trace("Writing to host buffer at idx %i", host_adc_buffer_indexer);
 
@@ -142,7 +143,7 @@ int main(int argc, char** argv) {
           measurements_buffer[host_adc_buffer_indexer].pin_no = adc_active_pins[pin_no];
           measurements_buffer[host_adc_buffer_indexer].value = io->Adc->Value[ii];
           measurements_buffer[host_adc_buffer_indexer].seq_no = seq_numbers[pin_no];
-          measurements_buffer[host_adc_buffer_indexer].status_flag = 0;
+          measurements_buffer[host_adc_buffer_indexer].status = ADC_READ_NEW_VALUE;
           pthread_mutex_unlock(&measurements_buffer_lock);
 
           /* Handling wrap-arounds */
@@ -166,7 +167,7 @@ int main(int argc, char** argv) {
         uint32_t unsent_measurement_cnt = 0;
         pthread_mutex_lock(&measurements_buffer_lock);
         for (uint32_t jj = 0; jj < CONFIG_HOST_ADC_BUFFER_SIZE; jj++) {
-          unsent_measurement_cnt += measurements_buffer[jj].status_flag ? 0 : 1;
+          unsent_measurement_cnt += (measurements_buffer[jj].status == ADC_READ_NEW_VALUE) ? 1 : 0;
         }
         pthread_mutex_unlock(&measurements_buffer_lock);
         // if (unsent_measurement_cnt)
