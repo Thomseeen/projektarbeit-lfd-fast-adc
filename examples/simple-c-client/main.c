@@ -14,8 +14,6 @@
 #define KEEP_ALIVE 30  // s
 
 int msgarrvd(void* context, char* topicName, int topicLen, MQTTClient_message* message) {
-  // printf("Message arrived topic: %s\n", topicName);
-
   AdcReading* adc_reading;
   adc_reading = message->payload;
 
