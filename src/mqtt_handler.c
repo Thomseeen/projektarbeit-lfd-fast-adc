@@ -1,13 +1,10 @@
 #include "mqtt_handler.h"
 
 #include <MQTTAsync.h>
-#include <pthread.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
 
-#include "config.h"
-#include "log.h"
+#include "common.h"
 
 volatile MQTT_CONNECTION_STATE mqtt_connection_flag = INITIALIZED;
 
@@ -78,6 +75,8 @@ void mqtt_handler_send_measurement(void* context) {
 }
 
 void* mqtt_handler(void* arg) {
+  init_logger();
+
   log_info("MQTT Handler thread has been started");
   /* Setup MQTT paho async C client structure */
   MQTTAsync mqtt_client;

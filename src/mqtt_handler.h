@@ -4,6 +4,8 @@
 #ifndef MQTT_HANDLER_H
 #define MQTT_HANDLER_H
 
+/* ***** Connection state ***** */
+
 /* 0 - initialized, 1 - connecting, 2 - connected, 3 - connection failed, 4 - ungracefully
  * disconnected, 5 - gracefully disconnected */
 typedef enum {
@@ -17,6 +19,8 @@ typedef enum {
 
 /* Globally availabe MQTT connection state */
 extern volatile MQTT_CONNECTION_STATE mqtt_connection_flag;
+
+/* ***** Actual exported functions ***** */
 
 /* MQTT handler to be called as child thread */
 void* mqtt_handler(void* arg);
