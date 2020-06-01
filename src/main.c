@@ -60,8 +60,8 @@ int main(int argc, char** argv) {
   uint32_t adc_rb_samples_wraparound = io->Adc->Samples;
   uint8_t adc_active_pin_cnt = io->Adc->ChAz;
 
-  log_info("Number of active steps: %i", adc_rb_samples_wraparound);
-  log_info("Number of samples: %i", adc_active_pin_cnt);
+  log_info("Number of active steps: %lu", adc_rb_samples_wraparound);
+  log_info("Number of samples: %hhu", adc_active_pin_cnt);
 
   /* Calculate actual active AIN numbers */
   uint8_t adc_active_pins[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
     }
   }
   for (uint8_t ii = 0; ii < adc_active_pin_cnt; ii++) {
-    log_info("Active pin %i: AIN%i", ii, adc_active_pins[ii]);
+    log_info("Active pin %hhu: AIN%hhu", ii, adc_active_pins[ii]);
   }
 
   /* Init counters */
@@ -81,6 +81,7 @@ int main(int argc, char** argv) {
   uint64_t seq_numbers[adc_active_pin_cnt];
   for (uint8_t ii = 0; ii < adc_active_pin_cnt; ii++) {
     seq_numbers[ii] = 0;
+    log_trace("Pin %hhi is currently at seq_no %llu", adc_active_pins[ii], seq_numbers[ii]);
   }
 
   /* Main loop */
@@ -119,7 +120,7 @@ int main(int argc, char** argv) {
         if (sample_cnt_current < sample_cnt_last)
           log_trace("Wrap-around occured in rb");
 
-        log_trace("sample_cnt_last %i, sample_cnt_current %i, start_index %i, end_index %i",
+        log_trace("sample_cnt_last %li, sample_cnt_current %li, start_index %li, end_index %li",
                   sample_cnt_last, sample_cnt_current, start_index, end_index);
 
         /* Write all new samples into measurements buffer */
@@ -130,14 +131,14 @@ int main(int argc, char** argv) {
           pthread_mutex_lock(&measurements_buffer_lock);
           if (measurements_buffer[host_adc_buffer_indexer].status != ADC_READ_SENT &&
               measurements_buffer[host_adc_buffer_indexer].status != ADC_READ_INITIALIZED) {
-            log_warn("Dropped measurement pin %i at seq_no %i with status %i",
+            log_warn("Dropped measurement pin %hhu at seq_no %llu with status %hu",
                      measurements_buffer[host_adc_buffer_indexer].pin_no,
                      measurements_buffer[host_adc_buffer_indexer].seq_no,
                      measurements_buffer[host_adc_buffer_indexer].status);
           }
           pthread_mutex_unlock(&measurements_buffer_lock);
 
-          log_trace("Writing to host buffer at idx %i", host_adc_buffer_indexer);
+          log_trace("Writing to host buffer at idx %lu", host_adc_buffer_indexer);
 
           pthread_mutex_lock(&measurements_buffer_lock);
           measurements_buffer[host_adc_buffer_indexer].pin_no = adc_active_pins[pin_no];
@@ -146,9 +147,12 @@ int main(int argc, char** argv) {
           measurements_buffer[host_adc_buffer_indexer].status = ADC_READ_NEW_VALUE;
           pthread_mutex_unlock(&measurements_buffer_lock);
 
+          log_trace("Pin %hhu is currently at seq_no %llu", adc_active_pins[pin_no],
+                    seq_numbers[pin_no]);
+
           /* Handling wrap-arounds */
           /* Wrap-round handling seq_no */
-          if (seq_numbers[pin_no] >= (0xFFFFFFFFFFFFFFFF - 1)) {
+          if (seq_numbers[pin_no] < (0xFFFFFFFFFFFFFFFF - 1)) {
             seq_numbers[pin_no]++;
           } else {
             seq_numbers[pin_no] = 0;
@@ -166,12 +170,12 @@ int main(int argc, char** argv) {
         /* Count sample to be sent */
         uint32_t unsent_measurement_cnt = 0;
         pthread_mutex_lock(&measurements_buffer_lock);
-        for (uint32_t jj = 0; jj < CONFIG_HOST_ADC_BUFFER_SIZE; jj++) {
-          unsent_measurement_cnt += (measurements_buffer[jj].status == ADC_READ_NEW_VALUE) ? 1 : 0;
+        for (uint32_t ii = 0; ii < CONFIG_HOST_ADC_BUFFER_SIZE; ii++) {
+          unsent_measurement_cnt += (measurements_buffer[ii].status == ADC_READ_NEW_VALUE) ? 1 : 0;
         }
         pthread_mutex_unlock(&measurements_buffer_lock);
         // if (unsent_measurement_cnt)
-        log_debug("%i unsent measurements in host buffer", unsent_measurement_cnt);
+        log_debug("%lu unsent measurements in host buffer", unsent_measurement_cnt);
       }
     }
   }

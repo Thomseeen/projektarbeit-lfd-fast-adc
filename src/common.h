@@ -6,8 +6,8 @@
 
 /* Global includes */
 #include <MQTTAsync.h>
+#include <inttypes.h>
 #include <pthread.h>
-#include <stdint.h>
 
 #include "adc_reading.h"
 #include "config.h"
