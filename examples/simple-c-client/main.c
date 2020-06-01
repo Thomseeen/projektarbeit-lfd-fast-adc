@@ -4,24 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef enum {
-  ADC_READ_INITIALIZED,
-  ADC_READ_NEW_VALUE,
-  ADC_READ_GRABBED_FROM_RB,
-  ADC_READ_SENDING,
-  ADC_READ_SENT
-} AdcReadingStatus;
-
-struct AdcReading_s {
-  uint16_t value;              // Actual 16bit ADC-reading
-  uint64_t seq_no;             // Measurement sequence number
-  uint8_t pin_no;              // Number of the AIN-pin
-  MQTTAsync_token mqtt_token;  // To keep track of async sending
-  AdcReadingStatus status;
-};
-
-typedef struct AdcReading_s AdcReading;
-
 #define ADDRESS "tcp://192.168.178.16:1883"
 #define CLIENTID "mfd"
 #define TOPIC "lfd/#"
