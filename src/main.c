@@ -10,11 +10,11 @@
 int main(int argc, char** argv) {
   /* Initialize Mutexes */
   if (pthread_mutex_init(&log_lock, NULL) != 0) {
-    // log_fatal("Log mutex could not be initialized");
+    log_fatal("Log mutex could not be initialized");
     exit(EXIT_FAILURE);
   }
   if (pthread_mutex_init(&measurements_buffer_lock, NULL) != 0) {
-    // log_fatal("Measurements buffer mutex could not be initialized");
+    log_fatal("Measurements buffer mutex could not be initialized");
     exit(EXIT_FAILURE);
   }
 
@@ -117,11 +117,13 @@ int main(int argc, char** argv) {
           end_index = (adc_rb_samples_wraparound - 1);
         }
 
-        if (sample_cnt_current < sample_cnt_last)
-          log_trace("Wrap-around occured in rb");
-
-        log_trace("sample_cnt_last %li, sample_cnt_current %li, start_index %li, end_index %li",
-                  sample_cnt_last, sample_cnt_current, start_index, end_index);
+        // clang-format off
+        MASK_LOGGING_CODE(LOG_TRACE,
+            if (sample_cnt_current < sample_cnt_last) log_trace("Wrap-around occured in rb");
+            log_trace("sample_cnt_last %li, sample_cnt_current %li, start_index %li, end_index %li",
+                      sample_cnt_last, sample_cnt_current, start_index, end_index);
+        )
+        // clang-format on
 
         /* Write all new samples into measurements buffer */
         for (int32_t ii = start_index + 1; ii <= end_index; ii++) {
@@ -138,7 +140,11 @@ int main(int argc, char** argv) {
           }
           pthread_mutex_unlock(&measurements_buffer_lock);
 
-          log_trace("Writing to host buffer at idx %lu", host_adc_buffer_indexer);
+          // clang-format off
+          MASK_LOGGING_CODE(LOG_TRACE,
+            log_trace("Writing to host buffer at idx %lu", host_adc_buffer_indexer);
+          )
+          // clang-format on
 
           pthread_mutex_lock(&measurements_buffer_lock);
           measurements_buffer[host_adc_buffer_indexer].pin_no = adc_active_pins[pin_no];
@@ -147,8 +153,11 @@ int main(int argc, char** argv) {
           measurements_buffer[host_adc_buffer_indexer].status = ADC_READ_NEW_VALUE;
           pthread_mutex_unlock(&measurements_buffer_lock);
 
-          log_trace("Pin %hhu is currently at seq_no %llu", adc_active_pins[pin_no],
-                    seq_numbers[pin_no]);
+          // clang-format off
+          MASK_LOGGING_CODE(LOG_TRACE,
+            log_trace("Pin %hhu is currently at seq_no %llu", adc_active_pins[pin_no], seq_numbers[pin_no]);
+          )
+          // clang-format on
 
           /* Handling wrap-arounds */
           /* Wrap-round handling seq_no */
@@ -168,14 +177,17 @@ int main(int argc, char** argv) {
         sample_cnt_last = end_index;
 
         /* Count sample to be sent */
-        uint32_t unsent_measurement_cnt = 0;
-        pthread_mutex_lock(&measurements_buffer_lock);
-        for (uint32_t ii = 0; ii < CONFIG_HOST_ADC_BUFFER_SIZE; ii++) {
-          unsent_measurement_cnt += (measurements_buffer[ii].status == ADC_READ_NEW_VALUE) ? 1 : 0;
-        }
-        pthread_mutex_unlock(&measurements_buffer_lock);
-        // if (unsent_measurement_cnt)
-        log_debug("%lu unsent measurements in host buffer", unsent_measurement_cnt);
+        // clang-format off
+        MASK_LOGGING_CODE(LOG_DEBUG,
+          uint32_t unsent_measurement_cnt = 0;
+          pthread_mutex_lock(&measurements_buffer_lock);
+          for (uint32_t ii = 0; ii < CONFIG_HOST_ADC_BUFFER_SIZE; ii++) {
+            unsent_measurement_cnt += (measurements_buffer[ii].status == ADC_READ_NEW_VALUE) ? 1 : 0;
+          } pthread_mutex_unlock(&measurements_buffer_lock);
+          if (unsent_measurement_cnt)
+            log_debug("%lu unsent measurements in host buffer", unsent_measurement_cnt);
+        )
+        // clang-format on
       }
     }
   }

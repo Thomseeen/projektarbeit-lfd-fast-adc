@@ -18,9 +18,12 @@ static void lock_callback(void* udata, int lock) {
   }
 }
 
+/********************************************************************************
+ * Initializr logger service with mutex
+ ********************************************************************************/
 void init_logger() {
   /* Set logger level */
-  log_set_level(LOG_TRACE);
+  log_set_level(LOG_LEVEL);
   /* Set up mutex for logger service */
   log_set_udata(&log_lock);
   log_set_lock(lock_callback);
