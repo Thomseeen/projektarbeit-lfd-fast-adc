@@ -1,8 +1,11 @@
-# Build artifacts
+# C build artifacts
 obj/
 *.o
 *.d
 
 # Binaries
 projektarbeit-lfd-fast-adc
-main
+*example
+
+# Python environment
+**/venv/
