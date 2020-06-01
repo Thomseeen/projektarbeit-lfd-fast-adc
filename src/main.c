@@ -1,25 +1,12 @@
+#include <libpruio/pruio.h>
 #include <pthread.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 
 #include "adc_reading.h"
 #include "config.h"
-#include "libpruio/pruio.h"
 #include "log.h"
-
-/********************************************************************************
- * MQTT-Handler
- ********************************************************************************/
-void* MqttHandler(void* arg) {
-  log_info("MQTT Handler thread has been started");
-  /* ~28ns per loop */
-  for (uint64_t ii = 0; ii < 1000000000; ii++)
-    ;
-  log_info("MQTT Handler thread terminates");
-  pthread_exit(NULL);
-}
+#include "mqtt_handler.h"
 
 /********************************************************************************
  * MAIN
@@ -52,16 +39,16 @@ int main(int argc, char** argv) {
 
   /* Start MQTT-Handler thread */
   pthread_t mqtt_handler_thread_id;
-  int rc = pthread_create(&mqtt_handler_thread_id, NULL, MqttHandler, NULL);
+  int rc = pthread_create(&mqtt_handler_thread_id, NULL, mqtt_handler, NULL);
   if (rc) {
     log_fatal("Unable to create MQTT-Handler thread, %d", rc);
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
 
   /* Start rb-mode */
   if (pruio_rb_start(io)) {
     log_fatal("PRUIO rb mode start failed (%s). Exiting...", io->Errr);
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
 
   uint32_t adc_rb_samples_wraparound = io->Adc->Samples;
@@ -179,5 +166,5 @@ int main(int argc, char** argv) {
   log_info("Destroying PRUIO driver structure");
   pruio_destroy(io);
 
-  exit(0);
+  exit(EXIT_SUCCESS);
 }

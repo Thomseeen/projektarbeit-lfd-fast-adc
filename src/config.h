@@ -44,7 +44,7 @@
 /* Default QOS to be used */
 #define MQTT_DEFAULT_QOS 1
 /* Timeout for MQTT connection / keep alive */
-#define MQTT_KEEP_ALIVE 10000L  // TODO: Unit?
+#define MQTT_KEEP_ALIVE 30  // s
 
 /********************************************************************************
  * FIXED DEFINES
