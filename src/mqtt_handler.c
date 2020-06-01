@@ -114,18 +114,28 @@ void* mqtt_handler(void* arg) {
     ;
   }
 
-  /* Main loop checking for new data */
+  /* Hold the found adc_reading so that the buffer lock doesn't have to be hold during sending */
   AdcReading adc_reading;
+  /* Index to keep track were the last value-to-be-sent was found */
+  uint32_t host_adc_buffer_indexer = 0;
+  /* Main loop checking for new data */
   while (mqtt_connection_flag == MQTT_CON_CONNECTED) {
+    int ii = host_adc_buffer_indexer;
     pthread_mutex_lock(&measurements_buffer_lock);
-    for (int ii = 0; ii < CONFIG_HOST_ADC_BUFFER_SIZE; ii++) {
+    for (; ii < CONFIG_HOST_ADC_BUFFER_SIZE; ii++) {
       if (measurements_buffer[ii].status == ADC_READ_NEW_VALUE) {
         measurements_buffer[ii].status = ADC_READ_GRABBED_FROM_RB;
         adc_reading = measurements_buffer[ii];
+        host_adc_buffer_indexer = ii;
         break;
       }
     }
     pthread_mutex_unlock(&measurements_buffer_lock);
+    /* If no value-to-be-sent was found, start over */
+    if (ii == CONFIG_HOST_ADC_BUFFER_SIZE) {
+      host_adc_buffer_indexer = 0;
+    }
+    /* New value found, pass to send-function */
     if (adc_reading.status == ADC_READ_GRABBED_FROM_RB) {
       mqtt_handler_send_measurement(mqtt_client, &adc_reading);
       adc_reading.status = ADC_READ_SENDING;
