@@ -63,6 +63,8 @@ void mqtt_handler_send_measurement(void* context, AdcReading* adc_reading) {
 
   mqtt_pubmsg.payload = adc_reading;
   mqtt_pubmsg.payloadlen = sizeof(*adc_reading);
+  log_trace("Sending measurement from pin %s with seq_no %i and %i bytes", adc_reading->pin_no,
+            adc_reading->seq_no, sizeof(*adc_reading));
   mqtt_pubmsg.qos = MQTT_DEFAULT_QOS;
   mqtt_pubmsg.retained = 0;
 
