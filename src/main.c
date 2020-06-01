@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
   AdcReading measurements_buffer[CONFIG_HOST_ADC_BUFFER_SIZE];
   /* Set all status flags to initialized */
   for (uint32_t ii = 0; ii < CONFIG_HOST_ADC_BUFFER_SIZE; ii++) {
-    measurements_buffer[ii].status_flag = 3;
+    measurements_buffer[ii] = AdcReading_default;
   }
 
   /* Start MQTT-Handler thread */
