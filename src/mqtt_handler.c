@@ -17,6 +17,7 @@ void mqtt_handler_on_send(void* context, MQTTAsync_successData* response) {
 
 void mqtt_handler_on_connect(void* context, MQTTAsync_successData* response) {
   mqtt_connection_flag = CONNECTED;
+  log_info("... Successfully connected");
 }
 
 void mqtt_handler_on_connect_failure(void* context, MQTTAsync_failureData* response) {
@@ -61,7 +62,6 @@ void mqtt_handler_send_measurement(void* context) {
 
   /* Build message structure */
   int rc;
-  log_info("... Successfully connected");
   mqtt_conn_opts.onSuccess = mqtt_handler_on_send;
   mqtt_conn_opts.context = mqtt_client;
 

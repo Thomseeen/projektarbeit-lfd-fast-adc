@@ -120,7 +120,7 @@ int main(int argc, char** argv) {
         for (int32_t ii = start_index + 1; ii <= end_index; ii++) {
           uint8_t pin_no = ii % adc_active_pin_cnt;
 
-          /* Check whether measurements have been dropped
+          /* TODO: Check whether measurements have been dropped
           if (!measurements_buffer[host_adc_buffer_indexer].status_flag) {
             log_warn("Dropped measurement pin %i at seq_no %i",
                    measurements_buffer[host_adc_buffer_indexer].pin_no,
