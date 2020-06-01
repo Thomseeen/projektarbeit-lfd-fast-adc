@@ -8,6 +8,8 @@
  * CONFIGURABLE PART
  ********************************************************************************/
 
+/* ***** PRUIO ***** */
+
 /* Define whether PRU-0 or PRU-1 should be used */
 #define CONFIG_PRU_NO 1
 /* Define whether ADC subsystem should be used */
@@ -30,6 +32,19 @@
 
 /* How big the host buffer of ADC-readings should be */
 #define CONFIG_HOST_ADC_BUFFER_SIZE 20
+
+/* ***** MQTT ***** */
+
+/* Address pointing to the MQTT-Broker to be used */
+#define MQTT_BROKER_ADDRESS "tcp://192.168.178.16:1883"
+/* Client ID to use on connect (needs to be unique!) - matching the hostname is wise */
+#define MQTT_CLIENTID "lfd-slave-1"
+/* Default prefix for MQTT-topic */
+#define MQTT_DEFAULT_TOPIC_PREFIX "lfd"
+/* Default QOS to be used */
+#define MQTT_DEFAULT_QOS 1
+/* Timeout for MQTT connection / keep alive */
+#define MQTT_KEEP_ALIVE 10000L  // TODO: Unit?
 
 /********************************************************************************
  * FIXED DEFINES
