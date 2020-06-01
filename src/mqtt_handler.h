@@ -17,7 +17,7 @@ typedef enum {
   MQTT_CON_GRACEFUL_DISCONNECT
 } MqttConnectionState;
 
-/* Globally availabe MQTT connection state */
+/* Globally availabe MQTT connection state, definition in mqtt_handler.c */
 extern volatile MqttConnectionState mqtt_connection_flag;
 
 /* ***** Actual exported functions ***** */
