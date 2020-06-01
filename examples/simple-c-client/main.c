@@ -1,6 +1,6 @@
 #include <MQTTAsync.h>
 #include <MQTTClient.h>
-#include <stdint.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -19,8 +19,8 @@ int msgarrvd(void* context, char* topicName, int topicLen, MQTTClient_message* m
   AdcReading* adc_reading;
   adc_reading = message->payload;
 
-  if (adc_reading->pin_no == 1)
-    printf("Reading: %d\n", adc_reading->value);
+  printf("Pin %hhu reads %f at %lu\n", adc_reading->pin_no,
+         (float)adc_reading->value / (float)0xFFF0 * 1.8f, adc_reading->seq_no);
 
   MQTTClient_freeMessage(&message);
   MQTTClient_free(topicName);
