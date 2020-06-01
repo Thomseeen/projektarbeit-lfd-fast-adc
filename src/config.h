@@ -42,7 +42,7 @@
 /* Client ID to use on connect (needs to be unique!) - matching the hostname is wise */
 #define MQTT_CLIENTID "lfd-slave-1"
 /* Default prefix for MQTT-topic */
-#define MQTT_DEFAULT_TOPIC_PREFIX "lfd"
+#define MQTT_DEFAULT_TOPIC_PREFIX "lfd/adc"
 /* Default QOS to be used */
 #define MQTT_DEFAULT_QOS 1
 /* Timeout for MQTT connection [s] / keep alive */
