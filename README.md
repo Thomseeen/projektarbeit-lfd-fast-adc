@@ -5,3 +5,4 @@ This tool is supposed to be CLI-only and configured via config-files.
 
 Libraries in use:
 libpruio - https://github.com/DTJF/libpruio
+rxi's log.c - https://github.com/rxi/log.c
