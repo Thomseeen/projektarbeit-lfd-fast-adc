@@ -51,7 +51,7 @@ void mqtt_handler_on_disconnect(void* context, MQTTAsync_successData* response) 
   log_info("Gracefully disconnected from MQTT-broker");
 }
 
-void mqtt_handler_send_measurement(void* context) {
+void mqtt_handler_send_measurement(void* context, AdcReading* adc_reading) {
   /* Setup MQTT paho async C client structure */
   MQTTAsync mqtt_client = (MQTTAsync)context;
   MQTTAsync_responseOptions mqtt_conn_opts = MQTTAsync_responseOptions_initializer;
@@ -62,8 +62,8 @@ void mqtt_handler_send_measurement(void* context) {
   mqtt_conn_opts.onSuccess = mqtt_handler_on_send;
   mqtt_conn_opts.context = mqtt_client;
 
-  mqtt_pubmsg.payload = "TEST";
-  mqtt_pubmsg.payloadlen = sizeof("TEST");
+  mqtt_pubmsg.payload = adc_reading;
+  mqtt_pubmsg.payloadlen = sizeof(*adc_reading);
   mqtt_pubmsg.qos = MQTT_DEFAULT_QOS;
   mqtt_pubmsg.retained = 0;
 
@@ -112,9 +112,21 @@ void* mqtt_handler(void* arg) {
   }
 
   /* Main loop checking for new data */
+  AdcReading adc_reading;
   while (mqtt_connection_flag == CONNECTED) {
-    mqtt_handler_send_measurement(mqtt_client);
-    usleep(1000000L);
+    pthread_mutex_lock(&measurements_buffer_lock);
+    for (int ii = 0; ii < CONFIG_HOST_ADC_BUFFER_SIZE; ii++) {
+      if (!measurements_buffer[ii].status_flag) {
+        measurements_buffer[ii].status_flag = 1;
+        adc_reading = measurements_buffer[ii];
+        break;
+      }
+    }
+    pthread_mutex_unlock(&measurements_buffer_lock);
+    if (adc_reading.status_flag == 1) {
+      mqtt_handler_send_measurement(mqtt_client, &adc_reading);
+      adc_reading.status_flag = 2;
+    }
   }
 
   log_info("MQTT Handler thread terminates");
