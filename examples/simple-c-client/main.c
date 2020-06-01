@@ -3,6 +3,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+
+#include "adc_reading.h"
 
 #define ADDRESS "tcp://192.168.178.16:1883"
 #define CLIENTID "mfd"
@@ -11,12 +14,13 @@
 #define KEEP_ALIVE 30  // s
 
 int msgarrvd(void* context, char* topicName, int topicLen, MQTTClient_message* message) {
-  printf("Message arrived topic: %s\n", topicName);
+  // printf("Message arrived topic: %s\n", topicName);
 
   AdcReading* adc_reading;
   adc_reading = message->payload;
 
-  printf("Reading: %d", adc_reading->value);
+  if (adc_reading->pin_no == 1)
+    printf("Reading: %d\n", adc_reading->value);
 
   MQTTClient_freeMessage(&message);
   MQTTClient_free(topicName);
@@ -60,6 +64,10 @@ int main(int argc, char* argv[]) {
     printf("Failed to subscribe, return code %d\n", rc);
     MQTTClient_destroy(&client);
     exit(EXIT_FAILURE);
+  }
+
+  while (1) {
+    usleep(10000);
   }
 
   if ((rc = MQTTClient_disconnect(client, 10000)) != MQTTCLIENT_SUCCESS) {
