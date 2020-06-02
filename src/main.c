@@ -5,16 +5,30 @@
 #include "mqtt_handler.h"
 
 /********************************************************************************
+ * Custom functions
+ ********************************************************************************/
+void cleanup(pruIo* io, pthread_mutex_t* log_lock, pthread_mutex_t* measurements_buffer_lock) {
+    log_info("Destroying PRUIO driver structure");
+    pthread_mutex_destroy(&log_lock);
+    pthread_mutex_destroy(&measurements_buffer_lock);
+    if (io) {
+        pruio_destroy(io);
+    }
+}
+
+/********************************************************************************
  * MAIN
  ********************************************************************************/
 int main(int argc, char** argv) {
     /* Initialize Mutexes */
     if (pthread_mutex_init(&log_lock, NULL) != 0) {
         log_fatal("Log mutex could not be initialized");
+        cleanup(NULL, &log_lock, &measurements_buffer_lock);
         exit(EXIT_FAILURE);
     }
     if (pthread_mutex_init(&measurements_buffer_lock, NULL) != 0) {
         log_fatal("Measurements buffer mutex could not be initialized");
+        cleanup(NULL, &log_lock, &measurements_buffer_lock);
         exit(EXIT_FAILURE);
     }
 
@@ -32,6 +46,7 @@ int main(int argc, char** argv) {
     if (pruio_config(io, CONFIG_ADC_RB_SAMPLES_PER_PORT, CONFIG_ADC_PIN_MASK, CONFIG_ADC_TMR,
                      CONFIG_ADC_ENCODING)) {
         log_fatal("PRUIO config failed (%s). Exiting...", io->Errr);
+        cleanup(io, &log_lock, &measurements_buffer_lock);
         exit(EXIT_FAILURE);
     }
 
@@ -48,12 +63,14 @@ int main(int argc, char** argv) {
     int rc = pthread_create(&mqtt_handler_thread_id, NULL, mqtt_handler, NULL);
     if (rc) {
         log_fatal("Unable to create MQTT-Handler thread, %d", rc);
+        cleanup(io, &log_lock, &measurements_buffer_lock);
         exit(EXIT_FAILURE);
     }
 
     /* Start rb-mode */
     if (pruio_rb_start(io)) {
         log_fatal("PRUIO rb mode start failed (%s). Exiting...", io->Errr);
+        cleanup(io, &log_lock, &measurements_buffer_lock);
         exit(EXIT_FAILURE);
     }
 
@@ -194,10 +211,6 @@ int main(int argc, char** argv) {
     }
 
     /* Destroy div. elements */
-    log_info("Destroying PRUIO driver structure");
-    pruio_destroy(io);
-    pthread_mutex_destroy(&log_lock);
-    pthread_mutex_destroy(&measurements_buffer_lock);
-
+    cleanup(io, &log_lock, &measurements_buffer_lock);
     exit(EXIT_SUCCESS);
 }

@@ -91,7 +91,7 @@ void* mqtt_handler(void* arg) {
         mqtt_connection_flag = MQTT_CON_CONNECTION_FAILED;
         log_fatal("... Failed to create MQTT-client, return code %d", rc);
         log_info("MQTT Handler thread terminates");
-        exit(EXIT_FAILURE);
+        pthread_exit(EXIT_FAILURE);
     };
 
     if ((rc = MQTTAsync_setCallbacks(mqtt_client, mqtt_client, mqtt_handler_connlost,
@@ -100,14 +100,14 @@ void* mqtt_handler(void* arg) {
         mqtt_connection_flag = MQTT_CON_CONNECTION_FAILED;
         log_fatal("... Failed to setup callbacks in MQTT-client, return code %d", rc);
         log_info("MQTT Handler thread terminates");
-        exit(EXIT_FAILURE);
+        pthread_exit(EXIT_FAILURE);
     };
 
     if ((rc = mqtt_handler_connect(mqtt_client)) != 0) {
         mqtt_connection_flag = MQTT_CON_CONNECTION_FAILED;
         log_fatal("... Failed to start connection, return code %d", rc);
         log_info("MQTT Handler thread terminates");
-        exit(EXIT_FAILURE);
+        pthread_exit(EXIT_FAILURE);
     };
 
     /* Main loop */
@@ -182,7 +182,7 @@ void mqtt_handler_connlost(void* context, char* cause) {
         mqtt_connection_flag = MQTT_CON_CONNECTION_FAILED;
         log_fatal("... Failed to start reconnection, return code %d", rc);
         log_info("MQTT Handler thread terminates");
-        exit(EXIT_FAILURE);
+        pthread_exit(EXIT_FAILURE);
     };
 }
 
@@ -210,6 +210,6 @@ void mqtt_handler_on_connect_failure(void* context, MQTTAsync_failureData* respo
         mqtt_connection_flag = MQTT_CON_CONNECTION_FAILED;
         log_fatal("... Failed to start reconnection, return code %d", rc);
         log_info("MQTT Handler thread terminates");
-        exit(EXIT_FAILURE);
+        pthread_exit(EXIT_FAILURE);
     };
 }
