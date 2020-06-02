@@ -16,8 +16,8 @@
 /* Logger */
 #define LOG_LEVEL LOG_TRACE
 /* Paho MQTT */ 
-#define MQTT_C_CLIENT_TRACE ON
-#define MQTT_C_CLIENT_TRACE_LEVEL PROTOCOL
+//#define MQTT_C_CLIENT_TRACE on
+//#define MQTT_C_CLIENT_TRACE_LEVEL PROTOCOL
 
 /* ***** PRUIO ***** */
 
@@ -56,6 +56,8 @@
 #define MQTT_DEFAULT_QOS 1
 /* Timeout for MQTT connection [s] / keep alive */
 #define MQTT_KEEP_ALIVE 30
+/* Time [s] till reconnect attempt on disconnect */
+#define MQTT_RECONNECT_TIMER 5
 
 /********************************************************************************
  * FIXED DEFINES
