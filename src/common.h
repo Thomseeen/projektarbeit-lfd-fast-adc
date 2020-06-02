@@ -27,8 +27,8 @@ void init_logger();
 #define LOG_LEVEL LOG_TRACE
 
 #define MASK_LOGGING_CODE(level, code) \
-  if (!(level < LOG_LEVEL)) {          \
-    code                               \
-  }
+    if (!(level < LOG_LEVEL)) {        \
+        code                           \
+    }
 
 #endif /* COMMON_H */
