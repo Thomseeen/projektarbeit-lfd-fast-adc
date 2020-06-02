@@ -23,9 +23,6 @@ volatile extern AdcReading measurements_buffer[CONFIG_HOST_ADC_BUFFER_SIZE];
 /* Init logger service */
 void init_logger();
 
-/* Log level */
-#define LOG_LEVEL LOG_TRACE
-
 #define MASK_LOGGING_CODE(level, code) \
     if (!(level < LOG_LEVEL)) {        \
         code                           \

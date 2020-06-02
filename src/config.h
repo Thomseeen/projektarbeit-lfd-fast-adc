@@ -10,6 +10,15 @@
  * CONFIGURABLE PART
  ********************************************************************************/
 
+
+/* ***** LOG LEVEL ***** */
+
+/* Logger */
+#define LOG_LEVEL LOG_TRACE
+/* Paho MQTT */ 
+#define MQTT_C_CLIENT_TRACE ON
+#define MQTT_C_CLIENT_TRACE_LEVEL PROTOCOL
+
 /* ***** PRUIO ***** */
 
 /* Define whether PRU-0 or PRU-1 should be used */
