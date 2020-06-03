@@ -30,11 +30,11 @@
 /* Delay bevore every averaging sequence - cycles @ 24MHz ~= 42ns - 0..0x3FFFF */
 #define CONFIG_ADC_OPEN_DELAY 238  // ~10us
 /* Sampling rate as Tmr [ns] between samples */
-#define CONFIG_ADC_TMR 10000000  // 10ms or 100Hz
+#define CONFIG_ADC_TMR 100000000  // 100ms or 10Hz
 /* By how many bits should the 12Bit ADC-values be padded? */
 #define CONFIG_ADC_ENCODING 4  // 16bit
 /* Bit mask for active AIN - LSB is charge up -> ignore, Bit 1 is AIN0, Bit 2 is AIN1, ... */
-#define CONFIG_ADC_PIN_MASK 0b000000100
+#define CONFIG_ADC_PIN_MASK 0b000111100
 /* How many samples to fetch in one go per active AIN before ring buffer wrap around */
 #define CONFIG_ADC_RB_SAMPLES_PER_PORT 1000
 
