@@ -201,7 +201,8 @@ int main(int argc, char** argv) {
                     for (uint32_t ii = 0; ii < CONFIG_HOST_ADC_BUFFER_SIZE; ii++) {
                         unsent_measurement_cnt +=
                             (measurements_buffer[ii].status == ADC_READ_NEW_VALUE) ? 1 : 0;
-                    } pthread_mutex_unlock(&measurements_buffer_lock);
+                    }
+                    pthread_mutex_unlock(&measurements_buffer_lock);
                     if (unsent_measurement_cnt) log_debug("%lu unsent measurements in host buffer",
                                                           unsent_measurement_cnt);
                 )

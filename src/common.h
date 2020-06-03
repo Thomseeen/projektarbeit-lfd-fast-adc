@@ -8,6 +8,8 @@
 #include <MQTTClient.h>
 #include <inttypes.h>
 #include <pthread.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 #include "adc_reading.h"
 #include "config.h"

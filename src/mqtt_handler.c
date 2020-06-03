@@ -1,8 +1,5 @@
 #include "mqtt_handler.h"
 
-#include <stdlib.h>
-#include <unistd.h>
-
 #include "common.h"
 
 volatile MqttConnectionState mqtt_connection_flag = MQTT_CON_INITIALIZED;
@@ -98,41 +95,49 @@ void* mqtt_handler(void* arg) {
 
     /* Main loop */
     while (1) {
-        /* Wait for connection */
-        while (mqtt_connection_flag != MQTT_CON_CONNECTED) {
-            ;
-        }
-
         /* Index to keep track were the last value-to-be-sent was found */
         uint32_t host_adc_buffer_indexer = 0;
+
+        AdcReading adc_reading;
+        AdcReading* adc_reading_pori;
+        AdcReading* adc_reading_p = &adc_reading;
         /* Connection established - checking for new data */
-        while (mqtt_connection_flag == MQTT_CON_CONNECTED) {
-            pthread_mutex_lock(&measurements_buffer_lock);
+        if (mqtt_connection_flag == MQTT_CON_CONNECTED) {
+            // pthread_mutex_lock(&measurements_buffer_lock);
             for (; host_adc_buffer_indexer < CONFIG_HOST_ADC_BUFFER_SIZE;
                  host_adc_buffer_indexer++) {
                 if (measurements_buffer[host_adc_buffer_indexer].status == ADC_READ_NEW_VALUE) {
                     measurements_buffer[host_adc_buffer_indexer].status = ADC_READ_GRABBED_FROM_RB;
+                    adc_reading_pori = &measurements_buffer[host_adc_buffer_indexer];
+                    adc_reading = measurements_buffer[host_adc_buffer_indexer];
                     break;
                 }
             }
+            // pthread_mutex_unlock(&measurements_buffer_lock);
             /* If no value-to-be-sent was found, start over */
             if (host_adc_buffer_indexer == CONFIG_HOST_ADC_BUFFER_SIZE) {
                 host_adc_buffer_indexer = 0;
             }
             /* New value found, pass to send-function */
-            if (measurements_buffer[host_adc_buffer_indexer].status == ADC_READ_GRABBED_FROM_RB) {
-                measurements_buffer[host_adc_buffer_indexer].status = ADC_READ_SENDING;
-                if (mqtt_handler_send_measurement(mqtt_client,
-                                                  &measurements_buffer[host_adc_buffer_indexer]) !=
+            if (adc_reading.status == ADC_READ_GRABBED_FROM_RB) {
+                adc_reading.status = ADC_READ_SENDING;
+                if (mqtt_handler_send_measurement(mqtt_client, adc_reading_p) !=
                     MQTTCLIENT_SUCCESS) {
                     /* Could not send because of disconnect, try again */
                     log_info("Reset measurement flag to ADC_READ_NEW_VALUE to retry sending");
-                    measurements_buffer[host_adc_buffer_indexer].status = ADC_READ_NEW_VALUE;
+                    // pthread_mutex_lock(&measurements_buffer_lock);
+                    adc_reading_pori->status = ADC_READ_NEW_VALUE;
+                    // pthread_mutex_unlock(&measurements_buffer_lock);
+                } else {
+                    // pthread_mutex_lock(&measurements_buffer_lock);
+                    adc_reading_pori->status = adc_reading.status;
+                    adc_reading_pori->mqtt_token = adc_reading.mqtt_token;
+                    // pthread_mutex_unlock(&measurements_buffer_lock);
                 }
             }
-            pthread_mutex_unlock(&measurements_buffer_lock);
+        } else {
+            log_info("Waiting for connection");
         }
-        log_info("Stopped publishing measurements\n");
     }
     log_info("MQTT Handler thread terminates");
     MQTTClient_destroy(&mqtt_client);
@@ -145,6 +150,13 @@ void* mqtt_handler(void* arg) {
 
 void mqtt_handler_delivered(void* context, MQTTClient_deliveryToken token) {
     log_trace("Message with token value %d delivery confirmed", token);
+    // pthread_mutex_lock(&measurements_buffer_lock);
+    for (int ii = 0; ii < CONFIG_HOST_ADC_BUFFER_SIZE; ii++) {
+        if (measurements_buffer[ii].mqtt_token == token) {
+            measurements_buffer[ii].status = ADC_READ_SENT;
+        }
+    }
+    // pthread_mutex_unlock(&measurements_buffer_lock);
 }
 
 int mqtt_handler_msg_arrived(void* context, char* topicName, int topicLen, MQTTClient_message* m) {
