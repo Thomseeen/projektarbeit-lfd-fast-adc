@@ -9,8 +9,8 @@
  ********************************************************************************/
 void cleanup(pruIo* io, pthread_mutex_t* log_lock, pthread_mutex_t* measurements_buffer_lock) {
     log_info("Destroying PRUIO driver structure");
-    pthread_mutex_destroy(&log_lock);
-    pthread_mutex_destroy(&measurements_buffer_lock);
+    pthread_mutex_destroy(log_lock);
+    pthread_mutex_destroy(measurements_buffer_lock);
     if (io) {
         pruio_destroy(io);
     }

@@ -5,7 +5,7 @@
 #define COMMON_H
 
 /* Global includes */
-#include <MQTTAsync.h>
+#include <MQTTClient.h>
 #include <inttypes.h>
 #include <pthread.h>
 
@@ -18,7 +18,7 @@ extern pthread_mutex_t log_lock;
 extern pthread_mutex_t measurements_buffer_lock;
 
 /* Global measurements_buffer, definition in common.c */
-volatile extern AdcReading measurements_buffer[CONFIG_HOST_ADC_BUFFER_SIZE];
+extern AdcReading measurements_buffer[CONFIG_HOST_ADC_BUFFER_SIZE];
 
 /* Init logger service */
 void init_logger();
