@@ -14,7 +14,7 @@
 /* ***** LOG LEVEL ***** */
 
 /* Logger */
-#define LOG_LEVEL LOG_TRACE
+#define LOG_LEVEL LOG_DEBUG
 /* Paho MQTT */ 
 //#define MQTT_C_CLIENT_TRACE on
 //#define MQTT_C_CLIENT_TRACE_LEVEL PROTOCOL
@@ -33,16 +33,16 @@
 /* Delay bevore every averaging sequence - cycles @ 24MHz ~= 42ns - 0..0x3FFFF */
 #define CONFIG_ADC_OPEN_DELAY 238  // ~10us
 /* Sampling rate as Tmr [ns] between samples */
-#define CONFIG_ADC_TMR 4000000000  // 4s or 0.25Hz
+#define CONFIG_ADC_TMR 10000000  // 10ms or 100Hz
 /* By how many bits should the 12Bit ADC-values be padded? */
 #define CONFIG_ADC_ENCODING 4  // 16bit
 /* Bit mask for active AIN - LSB is charge up -> ignore, Bit 1 is AIN0, Bit 2 is AIN1, ... */
-#define CONFIG_ADC_PIN_MASK 0b000000100
+#define CONFIG_ADC_PIN_MASK 0b000111100
 /* How many samples to fetch in one go per active AIN before ring buffer wrap around */
-#define CONFIG_ADC_RB_SAMPLES_PER_PORT 100
+#define CONFIG_ADC_RB_SAMPLES_PER_PORT 1000
 
 /* How big the host buffer of ADC-readings should be (ACTIVE_PINS_CNT x CONFIG_ADC_RB_SAMPLES_PER_PORT is a good idea) */
-#define CONFIG_HOST_ADC_BUFFER_SIZE 300
+#define CONFIG_HOST_ADC_BUFFER_SIZE 40000
 
 /* ***** MQTT ***** */
 

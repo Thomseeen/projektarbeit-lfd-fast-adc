@@ -7,8 +7,6 @@
 
 volatile MqttConnectionState mqtt_connection_flag = MQTT_CON_INITIALIZED;
 
-volatile MQTTAsync_token deliveredtoken;
-
 /********************************************************************************
  * MQTTAsync callbacks declaration for local use
  ********************************************************************************/
@@ -45,7 +43,7 @@ int mqtt_handler_connect(MQTTAsync client) {
     return MQTTASYNC_SUCCESS;
 }
 
-MQTTAsync_token mqtt_handler_send_measurement(void* context, AdcReading adc_reading) {
+int mqtt_handler_send_measurement(void* context, AdcReading adc_reading) {
     /* Setup MQTT paho async C client structure */
     MQTTAsync mqtt_client = (MQTTAsync)context;
     MQTTAsync_responseOptions mqtt_conn_opts = MQTTAsync_responseOptions_initializer;
@@ -61,17 +59,15 @@ MQTTAsync_token mqtt_handler_send_measurement(void* context, AdcReading adc_read
     mqtt_pubmsg.qos = MQTT_DEFAULT_QOS;
     mqtt_pubmsg.retained = 0;
 
-    deliveredtoken = 0;
-
     int rc;
     if ((rc = MQTTAsync_sendMessage(mqtt_client, MQTT_DEFAULT_TOPIC_PREFIX, &mqtt_pubmsg,
                                     &mqtt_conn_opts)) != MQTTASYNC_SUCCESS) {
         log_error("Failed to start sendMessage, return code %d", rc);
-        return -1;
+        return MQTTASYNC_FAILURE;
     }
     log_trace("Sent measurement from pin %hhu with seq_no %llu and %d bytes by token %d",
               adc_reading.pin_no, adc_reading.seq_no, sizeof(adc_reading), adc_reading.mqtt_token);
-    return adc_reading.mqtt_token;
+    return MQTTASYNC_SUCCESS;
 }
 
 /********************************************************************************
@@ -91,7 +87,7 @@ void* mqtt_handler(void* arg) {
         mqtt_connection_flag = MQTT_CON_CONNECTION_FAILED;
         log_fatal("... Failed to create MQTT-client, return code %d", rc);
         log_info("MQTT Handler thread terminates");
-        pthread_exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);
     };
 
     if ((rc = MQTTAsync_setCallbacks(mqtt_client, mqtt_client, mqtt_handler_connlost,
@@ -100,27 +96,22 @@ void* mqtt_handler(void* arg) {
         mqtt_connection_flag = MQTT_CON_CONNECTION_FAILED;
         log_fatal("... Failed to setup callbacks in MQTT-client, return code %d", rc);
         log_info("MQTT Handler thread terminates");
-        pthread_exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);
     };
 
     if ((rc = mqtt_handler_connect(mqtt_client)) != 0) {
         mqtt_connection_flag = MQTT_CON_CONNECTION_FAILED;
         log_fatal("... Failed to start connection, return code %d", rc);
         log_info("MQTT Handler thread terminates");
-        pthread_exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);
     };
 
     /* Main loop */
     while (1) {
-        /* Wait for connection */
-        while (mqtt_connection_flag != MQTT_CON_CONNECTED) {
-            ;
-        }
-
         /* Index to keep track were the last value-to-be-sent was found */
         uint32_t host_adc_buffer_indexer = 0;
         /* Connection established - checking for new data */
-        while (mqtt_connection_flag == MQTT_CON_CONNECTED) {
+        if (mqtt_connection_flag == MQTT_CON_CONNECTED) {
             pthread_mutex_lock(&measurements_buffer_lock);
             for (; host_adc_buffer_indexer < CONFIG_HOST_ADC_BUFFER_SIZE;
                  host_adc_buffer_indexer++) {
@@ -136,22 +127,22 @@ void* mqtt_handler(void* arg) {
             /* New value found, pass to send-function */
             if (measurements_buffer[host_adc_buffer_indexer].status == ADC_READ_GRABBED_FROM_RB) {
                 measurements_buffer[host_adc_buffer_indexer].status = ADC_READ_SENDING;
-                measurements_buffer[host_adc_buffer_indexer].mqtt_token =
-                    mqtt_handler_send_measurement(mqtt_client,
-                                                  measurements_buffer[host_adc_buffer_indexer]);
-                /* Could not send because of disconnect, try again */
-                if (measurements_buffer[host_adc_buffer_indexer].mqtt_token == -1) {
+                if (mqtt_handler_send_measurement(mqtt_client,
+                                                  measurements_buffer[host_adc_buffer_indexer])) {
+                    /* Could not send because of disconnect, try again */
                     log_info("Reset measurement flag to ADC_READ_NEW_VALUE to retry sending");
                     measurements_buffer[host_adc_buffer_indexer].mqtt_token = ADC_READ_NEW_VALUE;
                 }
             }
             pthread_mutex_unlock(&measurements_buffer_lock);
+        } else {
+            /* No connection */
+            ;
         }
-        log_info("Stopped publishing measurements\n");
     }
     log_info("MQTT Handler thread terminates");
     MQTTAsync_destroy(&mqtt_client);
-    pthread_exit(&rc);
+    exit(rc);
 }
 
 /********************************************************************************
@@ -182,7 +173,7 @@ void mqtt_handler_connlost(void* context, char* cause) {
         mqtt_connection_flag = MQTT_CON_CONNECTION_FAILED;
         log_fatal("... Failed to start reconnection, return code %d", rc);
         log_info("MQTT Handler thread terminates");
-        pthread_exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);
     };
 }
 
@@ -210,6 +201,6 @@ void mqtt_handler_on_connect_failure(void* context, MQTTAsync_failureData* respo
         mqtt_connection_flag = MQTT_CON_CONNECTION_FAILED;
         log_fatal("... Failed to start reconnection, return code %d", rc);
         log_info("MQTT Handler thread terminates");
-        pthread_exit(EXIT_FAILURE);
+        exit(EXIT_FAILURE);
     };
 }
