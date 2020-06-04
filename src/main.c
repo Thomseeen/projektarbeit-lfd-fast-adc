@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
     }
 
     /* Set all status flags to initialized */
-    const AdcReading AdcReading_default = {0, 0, 0, 0, ADC_READ_INITIALIZED};
+    const AdcReading AdcReading_default = {0, 0, 0, ADC_READ_INITIALIZED};
     for (uint32_t ii = 0; ii < CONFIG_HOST_ADC_BUFFER_SIZE; ii++) {
         pthread_mutex_lock(&measurements_buffer_lock[ii]);
         measurements_buffer[ii] = AdcReading_default;

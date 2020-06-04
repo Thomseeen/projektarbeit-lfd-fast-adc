@@ -18,7 +18,7 @@ def on_message(client, userdata, msg):
   print(f"Data recieved with length {len(msg.payload)}")
   try:
     # See adc_reading.h in simple-c-client why struc is packed like this
-    data = struct.unpack("@HQBiQ", msg.payload)
+    data = struct.unpack("@HQBQ", msg.payload)
     value = data[0] / 0xFFF0 * 1.8
     seq_no = data[1]
     pin_no = data[2]

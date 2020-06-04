@@ -3,7 +3,7 @@
 ########################################
 # Compiler settings
 CC = gcc
-CXXFLAGS = -Wall -DLOG_USE_COLOR
+CXXFLAGS = -Wall -DLOG_USE_COLOR -O
 LDFLAGS = -l paho-mqtt3a -lpruio -lpthread
 
 # Makefile settings

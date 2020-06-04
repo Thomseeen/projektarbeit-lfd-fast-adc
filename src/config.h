@@ -37,7 +37,7 @@
 /* By how many bits should the 12Bit ADC-values be padded? */
 #define CONFIG_ADC_ENCODING 4  // 16bit
 /* Bit mask for active AIN - LSB is charge up -> ignore, Bit 1 is AIN0, Bit 2 is AIN1, ... */
-#define CONFIG_ADC_PIN_MASK 0b000001100
+#define CONFIG_ADC_PIN_MASK 0b000011100
 /* How many samples to fetch in one go per active AIN before ring buffer wrap around */
 #define CONFIG_ADC_RB_SAMPLES_PER_PORT 1000
 
@@ -53,7 +53,7 @@
 /* Default prefix for MQTT-topic */
 #define MQTT_DEFAULT_TOPIC_PREFIX "lfd/adc"
 /* Default QOS to be used */
-#define MQTT_DEFAULT_QOS 1
+#define MQTT_DEFAULT_QOS 0
 /* Timeout for MQTT connection [s] / keep alive */
 #define MQTT_KEEP_ALIVE 30
 /* Time [s] till reconnect attempt on disconnect */

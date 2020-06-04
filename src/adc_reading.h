@@ -13,10 +13,9 @@ typedef enum {
 } AdcReadingStatus;
 
 struct AdcReading_s {
-    uint16_t value;              // Actual 16bit ADC-reading
-    uint64_t seq_no;             // Measurement sequence number
-    uint8_t pin_no;              // Number of the AIN-pin
-    MQTTAsync_token mqtt_token;  // To keep track of async sending
+    uint16_t value;   // Actual 16bit ADC-reading
+    uint64_t seq_no;  // Measurement sequence number
+    uint8_t pin_no;   // Number of the AIN-pin
     AdcReadingStatus status;
 };
 

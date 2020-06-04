@@ -3,7 +3,6 @@ Compile with
 gcc -Wall -o c-example simple-c-client.c -l paho-mqtt3c -l paho-mqtt3a
 */
 
-#include <MQTTAsync.h>
 #include <MQTTClient.h>
 #include <inttypes.h>
 #include <stdio.h>
