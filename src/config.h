@@ -11,7 +11,7 @@
 /* ***** LOG LEVEL ***** */
 
 /* Logger */
-#define INFO
+#define DEBUG
 /* Paho MQTT */
 //#define MQTT_C_CLIENT_TRACE on
 //#define MQTT_C_CLIENT_TRACE_LEVEL PROTOCOL
@@ -36,11 +36,11 @@
 /* Bit mask for active AIN - LSB is charge up -> ignore, Bit 1 is AIN0, Bit 2 is AIN1, ... */
 #define CONFIG_ADC_PIN_MASK 0b000000100
 /* How many samples to fetch in one go per active AIN before ring buffer wrap around */
-#define CONFIG_ADC_RB_SAMPLES_PER_PORT 1000
+#define CONFIG_ADC_RB_SAMPLES_PER_PORT 10000
 
 /* How big the host buffer of ADC-readings should be (ACTIVE_PINS_CNT x
  * CONFIG_ADC_RB_SAMPLES_PER_PORT is a good idea) */
-#define CONFIG_HOST_ADC_BUFFER_SIZE 40000
+#define CONFIG_HOST_ADC_BUFFER_SIZE 20000
 
 /* ***** MQTT ***** */
 
@@ -67,14 +67,14 @@
 
 /* ***** FOR LOGGING MASKING ***** */
 #ifdef TRACE
-#define LOG_LEVEL LOG_TACE
+#define LOG_LEVEL LOG_TRACE
 #define L_TRACE 1
 #define L_DEBUG 1
 #define L_INFO 1
 #define L_WARN 1
 #else
 #ifdef DEBUG
-#define L_LEVEL LOG_DEBUG
+#define LOG_LEVEL LOG_DEBUG
 #define L_TRACE 0
 #define L_DEBUG 1
 #define L_INFO 1

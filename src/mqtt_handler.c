@@ -1,8 +1,5 @@
 #include "mqtt_handler.h"
 
-#include <stdlib.h>
-#include <unistd.h>
-
 #include "common.h"
 
 volatile MqttConnectionState mqtt_connection_flag = MQTT_CON_INITIALIZED;
@@ -142,11 +139,16 @@ void* mqtt_handler(void* arg) {
                 if (mqtt_handler_send_measurement(mqtt_client, adc_reading_p) !=
                     MQTTASYNC_SUCCESS) {
                     /* Could not send because of disconnect, try again */
-#if L_INFO
-                    log_info("Reset measurement flag to ADC_READ_NEW_VALUE to retry sending");
+#if L_WARN
+                    log_warn("Reset measurement flag to ADC_READ_NEW_VALUE to retry sending");
 #endif
                     pthread_mutex_lock(&measurements_buffer_lock[host_adc_buffer_indexer]);
                     adc_reading_pori->status = ADC_READ_NEW_VALUE;
+                    pthread_mutex_unlock(&measurements_buffer_lock[host_adc_buffer_indexer]);
+                } else {
+                    /* TODO if meachanism whether actual sent happend */
+                    pthread_mutex_lock(&measurements_buffer_lock[host_adc_buffer_indexer]);
+                    adc_reading_pori->status = ADC_READ_SENT;
                     pthread_mutex_unlock(&measurements_buffer_lock[host_adc_buffer_indexer]);
                 }
             }

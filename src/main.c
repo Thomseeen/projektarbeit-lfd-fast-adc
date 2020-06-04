@@ -1,5 +1,4 @@
 #include <libpruio/pruio.h>
-#include <stdlib.h>
 
 #include "common.h"
 #include "mqtt_handler.h"
@@ -140,13 +139,11 @@ int main(int argc, char** argv) {
                 }
 
 #if L_TRACE
-                printf("trace piep");
                 if (sample_cnt_current < sample_cnt_last)
                     log_trace("Wrap-around occured in rb");
                 log_trace(
                     "sample_cnt_last %li, sample_cnt_current %li, start_index %li, end_index %li",
                     sample_cnt_last, sample_cnt_current, start_index, end_index);
-                )
 #endif
 
                 /* Write all new samples into measurements buffer */
@@ -168,7 +165,6 @@ int main(int argc, char** argv) {
 
 #if L_TRACE
                     log_trace("Writing to host buffer at idx %lu", host_adc_buffer_indexer);
-                    )
 #endif
 
                     measurements_buffer[host_adc_buffer_indexer].pin_no = adc_active_pins[pin_no];
@@ -180,15 +176,13 @@ int main(int argc, char** argv) {
 #if L_TRACE
                     log_trace("Pin %hhu is currently at seq_no %llu", adc_active_pins[pin_no],
                               seq_numbers[pin_no]);
-                    )
 #endif
 
                     /* Handling wrap-arounds */
                     /* Wrap-round handling seq_no */
                     if (seq_numbers[pin_no] < (0xFFFFFFFFFFFFFFFF - 1)) {
                         seq_numbers[pin_no]++;
-                    }
-                    else {
+                    } else {
                         seq_numbers[pin_no] = 0;
                     }
                     /* Wrap-around handling host buffer */
@@ -207,11 +201,19 @@ int main(int argc, char** argv) {
                 for (uint32_t ii = 0; ii < CONFIG_HOST_ADC_BUFFER_SIZE; ii++) {
                     pthread_mutex_lock(&measurements_buffer_lock[ii]);
                     unsent_measurement_cnt +=
-                        (measurements_buffer[ii].status == ADC_READ_NEW_VALUE) ? 1 : 0;
+                        (measurements_buffer[ii].status == ADC_READ_NEW_VALUE ||
+                         measurements_buffer[ii].status == ADC_READ_GRABBED_FROM_RB)
+                            ? 1
+                            : 0;
                     pthread_mutex_unlock(&measurements_buffer_lock[ii]);
                 }
-                if (unsent_measurement_cnt)
+                if (unsent_measurement_cnt) {
                     log_debug("%lu unsent measurements in host buffer", unsent_measurement_cnt);
+                    if (unsent_measurement_cnt > 100) {
+                        log_warn("Over 100 unsent messages, quick break", unsent_measurement_cnt);
+                        sleep(1);
+                    }
+                }
 #endif
             }
         }

@@ -6,8 +6,10 @@
 
 /* Global includes */
 #include <MQTTAsync.h>
-#include <inttypes.h>
-#include <pthread.h>
+#include <inttypes.h>  // fixed size types
+#include <pthread.h>   // threads
+#include <stdlib.h>    // error handling
+#include <unistd.h>    // sleep/usleep
 
 #include "adc_reading.h"
 #include "config.h"
