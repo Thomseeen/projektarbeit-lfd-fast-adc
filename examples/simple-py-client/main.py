@@ -5,7 +5,7 @@ ADDRESS = "192.168.178.16"
 PORT = 1883
 CLIENTID = "mfd-py"
 TOPIC = "lfd/#"
-QOS = 1
+QOS = 0
 KEEP_ALIVE = 30  # s
 
 
