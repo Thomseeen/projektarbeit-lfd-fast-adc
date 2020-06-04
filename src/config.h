@@ -4,18 +4,15 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-// clang-format off
-
 /********************************************************************************
  * CONFIGURABLE PART
  ********************************************************************************/
 
-
 /* ***** LOG LEVEL ***** */
 
 /* Logger */
-#define LOG_LEVEL LOG_DEBUG
-/* Paho MQTT */ 
+#define INFO
+/* Paho MQTT */
 //#define MQTT_C_CLIENT_TRACE on
 //#define MQTT_C_CLIENT_TRACE_LEVEL PROTOCOL
 
@@ -37,11 +34,12 @@
 /* By how many bits should the 12Bit ADC-values be padded? */
 #define CONFIG_ADC_ENCODING 4  // 16bit
 /* Bit mask for active AIN - LSB is charge up -> ignore, Bit 1 is AIN0, Bit 2 is AIN1, ... */
-#define CONFIG_ADC_PIN_MASK 0b000011100
+#define CONFIG_ADC_PIN_MASK 0b000000100
 /* How many samples to fetch in one go per active AIN before ring buffer wrap around */
 #define CONFIG_ADC_RB_SAMPLES_PER_PORT 1000
 
-/* How big the host buffer of ADC-readings should be (ACTIVE_PINS_CNT x CONFIG_ADC_RB_SAMPLES_PER_PORT is a good idea) */
+/* How big the host buffer of ADC-readings should be (ACTIVE_PINS_CNT x
+ * CONFIG_ADC_RB_SAMPLES_PER_PORT is a good idea) */
 #define CONFIG_HOST_ADC_BUFFER_SIZE 40000
 
 /* ***** MQTT ***** */
@@ -67,6 +65,43 @@
 /* Maximum available AIN count */
 #define LFD_MAX_ADC_PINS 8
 
-// clang-format on
+/* ***** FOR LOGGING MASKING ***** */
+#ifdef TRACE
+#define LOG_LEVEL LOG_TACE
+#define L_TRACE 1
+#define L_DEBUG 1
+#define L_INFO 1
+#define L_WARN 1
+#else
+#ifdef DEBUG
+#define L_LEVEL LOG_DEBUG
+#define L_TRACE 0
+#define L_DEBUG 1
+#define L_INFO 1
+#define L_WARN 1
+#else
+#ifdef INFO
+#define LOG_LEVEL LOG_INFO
+#define L_TRACE 0
+#define L_DEBUG 0
+#define L_INFO 1
+#define L_WARN 1
+#else
+#ifdef WARN
+#define LOG_LEVEL LOG_WARN
+#define L_TRACE 0
+#define L_DEBUG 0
+#define L_INFO 0
+#define L_WARN 1
+#else
+#define LOG_LEVEL LOG_ERROR
+#define L_TRACE 0
+#define L_DEBUG 0
+#define L_INFO 0
+#define L_WARN 0
+#endif /* WARN */
+#endif /* INFO */
+#endif /* DEBUG */
+#endif /* TRACE */
 
 #endif /* CONFIG_H */

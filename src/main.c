@@ -139,13 +139,15 @@ int main(int argc, char** argv) {
                     end_index = (adc_rb_samples_wraparound - 1);
                 }
 
-                // clang-format off
-                MASK_LOGGING_CODE(LOG_TRACE,
-                    if (sample_cnt_current < sample_cnt_last) log_trace("Wrap-around occured in rb");
-                    log_trace("sample_cnt_last %li, sample_cnt_current %li, start_index %li, end_index %li",
-                            sample_cnt_last, sample_cnt_current, start_index, end_index);
+#if L_TRACE
+                printf("trace piep");
+                if (sample_cnt_current < sample_cnt_last)
+                    log_trace("Wrap-around occured in rb");
+                log_trace(
+                    "sample_cnt_last %li, sample_cnt_current %li, start_index %li, end_index %li",
+                    sample_cnt_last, sample_cnt_current, start_index, end_index);
                 )
-                // clang-format on
+#endif
 
                 /* Write all new samples into measurements buffer */
                 for (int32_t ii = start_index + 1; ii <= end_index; ii++) {
@@ -153,24 +155,21 @@ int main(int argc, char** argv) {
 
                     /* Check whether measurements have been dropped */
                     pthread_mutex_lock(&measurements_buffer_lock[host_adc_buffer_indexer]);
-                    // clang-format off
-                    MASK_LOGGING_CODE(LOG_WARN,
-                        if (measurements_buffer[host_adc_buffer_indexer].status != ADC_READ_SENT &&
-                            measurements_buffer[host_adc_buffer_indexer].status !=
-                                ADC_READ_INITIALIZED) {
-                            log_warn("Dropped measurement pin %hhu at seq_no %llu with status %hu",
-                                    measurements_buffer[host_adc_buffer_indexer].pin_no,
-                                    measurements_buffer[host_adc_buffer_indexer].seq_no,
-                                    measurements_buffer[host_adc_buffer_indexer].status);
-                        }
-                    )
-                    // clang-format on
+#if L_WARN
+                    if (measurements_buffer[host_adc_buffer_indexer].status != ADC_READ_SENT &&
+                        measurements_buffer[host_adc_buffer_indexer].status !=
+                            ADC_READ_INITIALIZED) {
+                        log_warn("Dropped measurement pin %hhu at seq_no %llu with status %hu",
+                                 measurements_buffer[host_adc_buffer_indexer].pin_no,
+                                 measurements_buffer[host_adc_buffer_indexer].seq_no,
+                                 measurements_buffer[host_adc_buffer_indexer].status);
+                    }
+#endif
 
-                    // clang-format off
-                    MASK_LOGGING_CODE(LOG_TRACE,
-                        log_trace("Writing to host buffer at idx %lu", host_adc_buffer_indexer);
+#if L_TRACE
+                    log_trace("Writing to host buffer at idx %lu", host_adc_buffer_indexer);
                     )
-                    // clang-format on
+#endif
 
                     measurements_buffer[host_adc_buffer_indexer].pin_no = adc_active_pins[pin_no];
                     measurements_buffer[host_adc_buffer_indexer].value = io->Adc->Value[ii];
@@ -178,17 +177,18 @@ int main(int argc, char** argv) {
                     measurements_buffer[host_adc_buffer_indexer].status = ADC_READ_NEW_VALUE;
                     pthread_mutex_unlock(&measurements_buffer_lock[host_adc_buffer_indexer]);
 
-                    // clang-format off
-                    MASK_LOGGING_CODE(LOG_TRACE,
-                        log_trace("Pin %hhu is currently at seq_no %llu", adc_active_pins[pin_no], seq_numbers[pin_no]);
+#if L_TRACE
+                    log_trace("Pin %hhu is currently at seq_no %llu", adc_active_pins[pin_no],
+                              seq_numbers[pin_no]);
                     )
-                    // clang-format on
+#endif
 
                     /* Handling wrap-arounds */
                     /* Wrap-round handling seq_no */
                     if (seq_numbers[pin_no] < (0xFFFFFFFFFFFFFFFF - 1)) {
                         seq_numbers[pin_no]++;
-                    } else {
+                    }
+                    else {
                         seq_numbers[pin_no] = 0;
                     }
                     /* Wrap-around handling host buffer */
@@ -202,19 +202,17 @@ int main(int argc, char** argv) {
                 sample_cnt_last = end_index;
 
                 /* Count sample to be sent */
-                // clang-format off
-                MASK_LOGGING_CODE(LOG_DEBUG,
-                    uint32_t unsent_measurement_cnt = 0;
-                    for (uint32_t ii = 0; ii < CONFIG_HOST_ADC_BUFFER_SIZE; ii++) {
-                        pthread_mutex_lock(&measurements_buffer_lock[ii]);
-                        unsent_measurement_cnt +=
-                            (measurements_buffer[ii].status == ADC_READ_NEW_VALUE) ? 1 : 0;
-                        pthread_mutex_unlock(&measurements_buffer_lock[ii]);
-                    }
-                    if (unsent_measurement_cnt) log_debug("%lu unsent measurements in host buffer",
-                                                          unsent_measurement_cnt);
-                )
-                // clang-format on
+#if L_DEBUG
+                uint32_t unsent_measurement_cnt = 0;
+                for (uint32_t ii = 0; ii < CONFIG_HOST_ADC_BUFFER_SIZE; ii++) {
+                    pthread_mutex_lock(&measurements_buffer_lock[ii]);
+                    unsent_measurement_cnt +=
+                        (measurements_buffer[ii].status == ADC_READ_NEW_VALUE) ? 1 : 0;
+                    pthread_mutex_unlock(&measurements_buffer_lock[ii]);
+                }
+                if (unsent_measurement_cnt)
+                    log_debug("%lu unsent measurements in host buffer", unsent_measurement_cnt);
+#endif
             }
         }
     }

@@ -64,8 +64,12 @@ int mqtt_handler_send_measurement(void* context, AdcReading* adc_reading) {
         log_error("Failed to start sendMessage, return code %d", rc);
         return MQTTASYNC_FAILURE;
     }
+
+#if L_TRACE
     log_trace("Sent measurement from pin %hhu with seq_no %llu and %d bytes", adc_reading->pin_no,
               adc_reading->seq_no, sizeof(*adc_reading));
+#endif
+
     return MQTTASYNC_SUCCESS;
 }
 
@@ -138,7 +142,9 @@ void* mqtt_handler(void* arg) {
                 if (mqtt_handler_send_measurement(mqtt_client, adc_reading_p) !=
                     MQTTASYNC_SUCCESS) {
                     /* Could not send because of disconnect, try again */
+#if L_INFO
                     log_info("Reset measurement flag to ADC_READ_NEW_VALUE to retry sending");
+#endif
                     pthread_mutex_lock(&measurements_buffer_lock[host_adc_buffer_indexer]);
                     adc_reading_pori->status = ADC_READ_NEW_VALUE;
                     pthread_mutex_unlock(&measurements_buffer_lock[host_adc_buffer_indexer]);
@@ -159,7 +165,9 @@ void* mqtt_handler(void* arg) {
  ********************************************************************************/
 
 void mqtt_handler_delivered(void* context, MQTTAsync_token token) {
+#if L_TRACE
     log_trace("Message with token value %d delivery confirmed", token);
+#endif
 }
 
 int mqtt_handler_msg_arrived(void* context, char* topicName, int topicLen, MQTTAsync_message* m) {

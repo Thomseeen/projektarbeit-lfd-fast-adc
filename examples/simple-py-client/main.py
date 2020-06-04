@@ -18,12 +18,11 @@ def on_message(client, userdata, msg):
   print(f"Data recieved with length {len(msg.payload)}")
   try:
     # See adc_reading.h in simple-c-client why struc is packed like this
-    data = struct.unpack("@HQBQ", msg.payload)
+    data = struct.unpack("@HQBQX", msg.payload)
     value = data[0] / 0xFFF0 * 1.8
     seq_no = data[1]
     pin_no = data[2]
-    mqtt_token = data[3]
-    status = data[4]
+    status = data[3]
     print(f"Pin {pin_no} reads {value} at {seq_no}")
   except Exception:
     import traceback

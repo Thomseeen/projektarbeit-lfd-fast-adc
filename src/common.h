@@ -23,9 +23,4 @@ extern AdcReading measurements_buffer[CONFIG_HOST_ADC_BUFFER_SIZE];
 /* Init logger service */
 void init_logger();
 
-#define MASK_LOGGING_CODE(level, code) \
-    if (!(level < LOG_LEVEL)) {        \
-        code                           \
-    }
-
 #endif /* COMMON_H */
