@@ -10,7 +10,9 @@
 void cleanup(pruIo* io, pthread_mutex_t* log_lock, pthread_mutex_t* measurements_buffer_lock) {
     log_info("Destroying PRUIO driver structure");
     pthread_mutex_destroy(log_lock);
-    pthread_mutex_destroy(measurements_buffer_lock);
+    for (int ii = 0; ii < CONFIG_HOST_ADC_BUFFER_SIZE; ii++) {
+        pthread_mutex_destroy(&measurements_buffer_lock[ii]);
+    }
     if (io) {
         pruio_destroy(io);
     }
@@ -23,13 +25,15 @@ int main(int argc, char** argv) {
     /* Initialize Mutexes */
     if (pthread_mutex_init(&log_lock, NULL) != 0) {
         log_fatal("Log mutex could not be initialized");
-        cleanup(NULL, &log_lock, &measurements_buffer_lock);
+        cleanup(NULL, &log_lock, measurements_buffer_lock);
         exit(EXIT_FAILURE);
     }
-    if (pthread_mutex_init(&measurements_buffer_lock, NULL) != 0) {
-        log_fatal("Measurements buffer mutex could not be initialized");
-        cleanup(NULL, &log_lock, &measurements_buffer_lock);
-        exit(EXIT_FAILURE);
+    for (int ii = 0; ii < CONFIG_HOST_ADC_BUFFER_SIZE; ii++) {
+        if (pthread_mutex_init(&measurements_buffer_lock[ii], NULL) != 0) {
+            log_fatal("Measurements buffer mutex could not be initialized");
+            cleanup(NULL, &log_lock, measurements_buffer_lock);
+            exit(EXIT_FAILURE);
+        }
     }
 
     init_logger();
@@ -46,31 +50,31 @@ int main(int argc, char** argv) {
     if (pruio_config(io, CONFIG_ADC_RB_SAMPLES_PER_PORT, CONFIG_ADC_PIN_MASK, CONFIG_ADC_TMR,
                      CONFIG_ADC_ENCODING)) {
         log_fatal("PRUIO config failed (%s). Exiting...", io->Errr);
-        cleanup(io, &log_lock, &measurements_buffer_lock);
+        cleanup(io, &log_lock, measurements_buffer_lock);
         exit(EXIT_FAILURE);
     }
 
     /* Set all status flags to initialized */
     const AdcReading AdcReading_default = {0, 0, 0, 0, ADC_READ_INITIALIZED};
-    pthread_mutex_lock(&measurements_buffer_lock);
     for (uint32_t ii = 0; ii < CONFIG_HOST_ADC_BUFFER_SIZE; ii++) {
+        pthread_mutex_lock(&measurements_buffer_lock[ii]);
         measurements_buffer[ii] = AdcReading_default;
+        pthread_mutex_unlock(&measurements_buffer_lock[ii]);
     }
-    pthread_mutex_unlock(&measurements_buffer_lock);
 
     /* Start MQTT-Handler thread */
     pthread_t mqtt_handler_thread_id;
     int rc = pthread_create(&mqtt_handler_thread_id, NULL, mqtt_handler, NULL);
     if (rc) {
         log_fatal("Unable to create MQTT-Handler thread, %d", rc);
-        cleanup(io, &log_lock, &measurements_buffer_lock);
+        cleanup(io, &log_lock, measurements_buffer_lock);
         exit(EXIT_FAILURE);
     }
 
     /* Start rb-mode */
     if (pruio_rb_start(io)) {
         log_fatal("PRUIO rb mode start failed (%s). Exiting...", io->Errr);
-        cleanup(io, &log_lock, &measurements_buffer_lock);
+        cleanup(io, &log_lock, measurements_buffer_lock);
         exit(EXIT_FAILURE);
     }
 
@@ -148,15 +152,19 @@ int main(int argc, char** argv) {
                     uint8_t pin_no = ii % adc_active_pin_cnt;
 
                     /* Check whether measurements have been dropped */
-                    pthread_mutex_lock(&measurements_buffer_lock);
-                    if (measurements_buffer[host_adc_buffer_indexer].status != ADC_READ_SENT &&
-                        measurements_buffer[host_adc_buffer_indexer].status !=
-                            ADC_READ_INITIALIZED) {
-                        log_warn("Dropped measurement pin %hhu at seq_no %llu with status %hu",
-                                 measurements_buffer[host_adc_buffer_indexer].pin_no,
-                                 measurements_buffer[host_adc_buffer_indexer].seq_no,
-                                 measurements_buffer[host_adc_buffer_indexer].status);
-                    }
+                    pthread_mutex_lock(&measurements_buffer_lock[host_adc_buffer_indexer]);
+                    // clang-format off
+                    MASK_LOGGING_CODE(LOG_WARN,
+                        if (measurements_buffer[host_adc_buffer_indexer].status != ADC_READ_SENT &&
+                            measurements_buffer[host_adc_buffer_indexer].status !=
+                                ADC_READ_INITIALIZED) {
+                            log_warn("Dropped measurement pin %hhu at seq_no %llu with status %hu",
+                                    measurements_buffer[host_adc_buffer_indexer].pin_no,
+                                    measurements_buffer[host_adc_buffer_indexer].seq_no,
+                                    measurements_buffer[host_adc_buffer_indexer].status);
+                        }
+                    )
+                    // clang-format on
 
                     // clang-format off
                     MASK_LOGGING_CODE(LOG_TRACE,
@@ -168,7 +176,7 @@ int main(int argc, char** argv) {
                     measurements_buffer[host_adc_buffer_indexer].value = io->Adc->Value[ii];
                     measurements_buffer[host_adc_buffer_indexer].seq_no = seq_numbers[pin_no];
                     measurements_buffer[host_adc_buffer_indexer].status = ADC_READ_NEW_VALUE;
-                    pthread_mutex_unlock(&measurements_buffer_lock);
+                    pthread_mutex_unlock(&measurements_buffer_lock[host_adc_buffer_indexer]);
 
                     // clang-format off
                     MASK_LOGGING_CODE(LOG_TRACE,
@@ -197,11 +205,12 @@ int main(int argc, char** argv) {
                 // clang-format off
                 MASK_LOGGING_CODE(LOG_DEBUG,
                     uint32_t unsent_measurement_cnt = 0;
-                    pthread_mutex_lock(&measurements_buffer_lock);
                     for (uint32_t ii = 0; ii < CONFIG_HOST_ADC_BUFFER_SIZE; ii++) {
+                        pthread_mutex_lock(&measurements_buffer_lock[ii]);
                         unsent_measurement_cnt +=
                             (measurements_buffer[ii].status == ADC_READ_NEW_VALUE) ? 1 : 0;
-                    } pthread_mutex_unlock(&measurements_buffer_lock);
+                        pthread_mutex_unlock(&measurements_buffer_lock[ii]);
+                    }
                     if (unsent_measurement_cnt) log_debug("%lu unsent measurements in host buffer",
                                                           unsent_measurement_cnt);
                 )
@@ -211,6 +220,6 @@ int main(int argc, char** argv) {
     }
 
     /* Destroy div. elements */
-    cleanup(io, &log_lock, &measurements_buffer_lock);
+    cleanup(io, &log_lock, measurements_buffer_lock);
     exit(EXIT_SUCCESS);
 }

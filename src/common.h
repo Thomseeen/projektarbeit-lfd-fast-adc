@@ -15,10 +15,10 @@
 
 /* Mutexes, definition in common.c, init in main.c */
 extern pthread_mutex_t log_lock;
-extern pthread_mutex_t measurements_buffer_lock;
+extern pthread_mutex_t measurements_buffer_lock[CONFIG_HOST_ADC_BUFFER_SIZE];
 
 /* Global measurements_buffer, definition in common.c */
-volatile extern AdcReading measurements_buffer[CONFIG_HOST_ADC_BUFFER_SIZE];
+extern AdcReading measurements_buffer[CONFIG_HOST_ADC_BUFFER_SIZE];
 
 /* Init logger service */
 void init_logger();

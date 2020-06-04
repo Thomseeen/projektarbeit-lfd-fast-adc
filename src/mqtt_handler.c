@@ -43,7 +43,7 @@ int mqtt_handler_connect(MQTTAsync client) {
     return MQTTASYNC_SUCCESS;
 }
 
-int mqtt_handler_send_measurement(void* context, AdcReading adc_reading) {
+int mqtt_handler_send_measurement(void* context, AdcReading* adc_reading) {
     /* Setup MQTT paho async C client structure */
     MQTTAsync mqtt_client = (MQTTAsync)context;
     MQTTAsync_responseOptions mqtt_conn_opts = MQTTAsync_responseOptions_initializer;
@@ -51,10 +51,10 @@ int mqtt_handler_send_measurement(void* context, AdcReading adc_reading) {
 
     /* Build message structure */
     mqtt_conn_opts.context = mqtt_client;
-    mqtt_conn_opts.context = &adc_reading.mqtt_token;
+    mqtt_conn_opts.context = &adc_reading->mqtt_token;
 
-    mqtt_pubmsg.payload = &adc_reading;
-    mqtt_pubmsg.payloadlen = sizeof(adc_reading);
+    mqtt_pubmsg.payload = adc_reading;
+    mqtt_pubmsg.payloadlen = sizeof(*adc_reading);
 
     mqtt_pubmsg.qos = MQTT_DEFAULT_QOS;
     mqtt_pubmsg.retained = 0;
@@ -66,7 +66,8 @@ int mqtt_handler_send_measurement(void* context, AdcReading adc_reading) {
         return MQTTASYNC_FAILURE;
     }
     log_trace("Sent measurement from pin %hhu with seq_no %llu and %d bytes by token %d",
-              adc_reading.pin_no, adc_reading.seq_no, sizeof(adc_reading), adc_reading.mqtt_token);
+              adc_reading->pin_no, adc_reading->seq_no, sizeof(*adc_reading),
+              adc_reading->mqtt_token);
     return MQTTASYNC_SUCCESS;
 }
 
@@ -112,12 +113,21 @@ void* mqtt_handler(void* arg) {
         uint32_t host_adc_buffer_indexer = 0;
         /* Connection established - checking for new data */
         if (mqtt_connection_flag == MQTT_CON_CONNECTED) {
-            pthread_mutex_lock(&measurements_buffer_lock);
+            /* Some temporary data holders */
+            AdcReading adc_reading;                    // Copy
+            AdcReading* adc_reading_pori = NULL;       // Pointer to original
+            AdcReading* adc_reading_p = &adc_reading;  // Pointer to copy
             for (; host_adc_buffer_indexer < CONFIG_HOST_ADC_BUFFER_SIZE;
                  host_adc_buffer_indexer++) {
+                pthread_mutex_lock(&measurements_buffer_lock[host_adc_buffer_indexer]);
                 if (measurements_buffer[host_adc_buffer_indexer].status == ADC_READ_NEW_VALUE) {
                     measurements_buffer[host_adc_buffer_indexer].status = ADC_READ_GRABBED_FROM_RB;
+                    adc_reading_pori = &measurements_buffer[host_adc_buffer_indexer];
+                    adc_reading = measurements_buffer[host_adc_buffer_indexer];
+                    pthread_mutex_unlock(&measurements_buffer_lock[host_adc_buffer_indexer]);
                     break;
+                } else {
+                    pthread_mutex_unlock(&measurements_buffer_lock[host_adc_buffer_indexer]);
                 }
             }
             /* If no value-to-be-sent was found, start over */
@@ -125,16 +135,17 @@ void* mqtt_handler(void* arg) {
                 host_adc_buffer_indexer = 0;
             }
             /* New value found, pass to send-function */
-            if (measurements_buffer[host_adc_buffer_indexer].status == ADC_READ_GRABBED_FROM_RB) {
-                measurements_buffer[host_adc_buffer_indexer].status = ADC_READ_SENDING;
-                if (mqtt_handler_send_measurement(mqtt_client,
-                                                  measurements_buffer[host_adc_buffer_indexer])) {
+            if (adc_reading.status == ADC_READ_GRABBED_FROM_RB) {
+                adc_reading.status = ADC_READ_SENDING;
+                if (mqtt_handler_send_measurement(mqtt_client, adc_reading_p) !=
+                    MQTTASYNC_SUCCESS) {
                     /* Could not send because of disconnect, try again */
                     log_info("Reset measurement flag to ADC_READ_NEW_VALUE to retry sending");
-                    measurements_buffer[host_adc_buffer_indexer].mqtt_token = ADC_READ_NEW_VALUE;
+                    pthread_mutex_lock(&measurements_buffer_lock[host_adc_buffer_indexer]);
+                    adc_reading_pori->mqtt_token = ADC_READ_NEW_VALUE;
+                    pthread_mutex_unlock(&measurements_buffer_lock[host_adc_buffer_indexer]);
                 }
             }
-            pthread_mutex_unlock(&measurements_buffer_lock);
         } else {
             /* No connection */
             ;
