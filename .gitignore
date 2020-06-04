@@ -7,5 +7,6 @@ obj/
 projektarbeit-lfd-fast-adc
 *example
 
-# Python environment
+# Python environment and recordings
 **/venv/
+*.npy
