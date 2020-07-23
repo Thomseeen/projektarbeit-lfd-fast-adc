@@ -35,6 +35,8 @@
 #define CONFIG_ADC_ENCODING 4  // 16bit
 /* Bit mask for active AIN - LSB is charge up -> ignore, Bit 1 is AIN0, Bit 2 is AIN1, ... */
 #define CONFIG_ADC_PIN_MASK 0b000011110
+/* Count of active pins, hast to match CONFIG_ADC_PIN_MASK! */
+#define CONFIG_ADC_ACTIVE_PIN_CNT 4
 /* How many samples to fetch in one go per active AIN before ring buffer wrap around */
 #define CONFIG_ADC_RB_SAMPLES_PER_PORT 10000
 

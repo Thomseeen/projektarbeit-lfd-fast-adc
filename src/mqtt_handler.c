@@ -40,10 +40,8 @@ int mqtt_handler_connect(MQTTAsync client) {
     return MQTTASYNC_SUCCESS;
 }
 
-int mqtt_handler_send_measurement(void* context, AdcReading* adc_reading) {
-    /* Set status to sending */
-    adc_reading->status = ADC_READ_SENDING;
-
+int mqtt_handler_send_measurement(void* context,
+                                  AdcReading* adc_reading[CONFIG_ADC_ACTIVE_PIN_CNT]) {
     /* Setup MQTT paho async C client structure */
     MQTTAsync mqtt_client = (MQTTAsync)context;
     MQTTAsync_responseOptions mqtt_conn_opts = MQTTAsync_responseOptions_initializer;
@@ -52,8 +50,14 @@ int mqtt_handler_send_measurement(void* context, AdcReading* adc_reading) {
     /* Build message structure */
     mqtt_conn_opts.context = mqtt_client;
 
-    mqtt_pubmsg.payload = adc_reading;
-    mqtt_pubmsg.payloadlen = sizeof(*adc_reading);
+    AdcReading measurements[CONFIG_ADC_ACTIVE_PIN_CNT];
+    for (int ii = 0; ii < CONFIG_ADC_ACTIVE_PIN_CNT; ii++) {
+        adc_reading[ii]->status = ADC_READ_SENDING;
+        measurements[ii] = *(adc_reading[ii]);
+    }
+
+    mqtt_pubmsg.payload = &measurements;
+    mqtt_pubmsg.payloadlen = sizeof(measurements);
 
     mqtt_pubmsg.qos = MQTT_DEFAULT_QOS;
     mqtt_pubmsg.retained = 0;
@@ -66,12 +70,15 @@ int mqtt_handler_send_measurement(void* context, AdcReading* adc_reading) {
     }
 
 #if L_TRACE
-    log_trace("Sent measurement from pin %hhu with seq_no %llu and %d bytes", adc_reading->pin_no,
-              adc_reading->seq_no, sizeof(*adc_reading));
+    log_trace("Sent measurement with seq_no %llu and %d bytes", measurements[0].seq_no,
+              sizeof(measurements));
 #endif
 
     /* Free memory */
-    free(adc_reading);
+    for (int ii = 0; ii < CONFIG_ADC_ACTIVE_PIN_CNT; ii++) {
+        free(adc_reading[ii]);
+        adc_reading[ii] = NULL;
+    }
 
     return MQTTASYNC_SUCCESS;
 }
@@ -112,6 +119,14 @@ void* mqtt_handler(void* arg) {
         exit(EXIT_FAILURE);
     };
 
+    /* Collector for multiple measurements */
+    AdcReading* collected_measurements[CONFIG_ADC_ACTIVE_PIN_CNT];
+    for (int ii = 0; ii < CONFIG_ADC_ACTIVE_PIN_CNT; ii++) {
+        collected_measurements[ii] = NULL;
+    }
+    uint8_t collecting_seq_no = 0;
+    uint8_t collected_pins_cnt = 0;
+
     /* Main loop */
     while (1) {
         /* Connection established - checking for new data */
@@ -129,21 +144,43 @@ void* mqtt_handler(void* arg) {
                 }
                 adc_reading_p->status = ADC_READ_GRABBED_FROM_QUEUE;
 
-                /* New value found, pass to send-function */
-                if (adc_reading_p->status == ADC_READ_GRABBED_FROM_QUEUE) {
-                    if (mqtt_handler_send_measurement(mqtt_client, adc_reading_p) !=
+                bool sorted = false;
+                do {
+                    if (adc_reading_p->seq_no == collecting_seq_no) {
+                        collected_measurements[adc_reading_p->pin_no] = adc_reading_p;
+                        collected_pins_cnt++;
+                        sorted = true;
+                    } else {
+                        collected_pins_cnt = 0;
+                        /* Wrap-round handling seq_no */
+                        if (collecting_seq_no < (0xFFFFFFFFFFFFFFFF - 1)) {
+                            collecting_seq_no++;
+                        } else {
+                            collecting_seq_no = 0;
+                        }
+                        for (int ii = 0; ii < CONFIG_ADC_ACTIVE_PIN_CNT; ii++) {
+                            /* Free unsent/unused measurements */
+                            if (collected_measurements[ii]) {
+                                free(collected_measurements[ii]);
+                            }
+                            collected_measurements[ii] = NULL;
+                        }
+                    }
+                } while (!sorted);
+
+                /* New measurements collected, pass to send-function */
+                if (collected_pins_cnt == CONFIG_ADC_ACTIVE_PIN_CNT) {
+                    if (mqtt_handler_send_measurement(mqtt_client, collected_measurements) !=
                         MQTTASYNC_SUCCESS) {
-                        /* Could not send because of disconnect, try again */
+                        /* Could not send because of disconnect */
 #if L_WARN
-                        log_warn(
-                            "Reset measurement flag to ADC_READ_NEW_VALUE and push back into queue "
-                            "to "
-                            "retry sending");
+                        log_warn("Measurement could not be sent, discard");
 #endif
-                        adc_reading_p->status = ADC_READ_NEW_VALUE;
-                        if (!rpa_queue_push(measurements_queue, adc_reading_p)) {
-                            log_error("Error on pushing measurement back into queue, discard");
-                            free(adc_reading_p);
+                        /* Free unsent/unused measurements */
+                        for (int ii = 0; ii < CONFIG_ADC_ACTIVE_PIN_CNT; ii++) {
+                            if (collected_measurements[ii]) {
+                                free(collected_measurements[ii]);
+                            }
                         }
                     }
                 }

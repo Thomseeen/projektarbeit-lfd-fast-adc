@@ -75,6 +75,11 @@ int main(int argc, char** argv) {
 
     log_info("Number of active steps: %lu", adc_rb_samples_wraparound);
     log_info("Number of samples: %hhu", adc_active_pin_cnt);
+    if (adc_active_pin_cnt != CONFIG_ADC_ACTIVE_PIN_CNT) {
+        log_fatal("CONFIG_ADC_ACTIVE_PIN_CNT does not match the pin mask. Exiting...");
+        cleanup(io, &log_lock, measurements_queue);
+        exit(EXIT_FAILURE);
+    }
 
     /* Calculate actual active AIN numbers */
     uint8_t adc_active_pins[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
@@ -84,14 +89,14 @@ int main(int argc, char** argv) {
             jj++;
         }
     }
-    for (uint8_t ii = 0; ii < adc_active_pin_cnt; ii++) {
+    for (uint8_t ii = 0; ii < CONFIG_ADC_ACTIVE_PIN_CNT; ii++) {
         log_info("Active pin %hhu: AIN%hhu", ii, adc_active_pins[ii]);
     }
 
     /* Init counters */
     int32_t sample_cnt_last = -1;
-    uint64_t seq_numbers[adc_active_pin_cnt];
-    for (uint8_t ii = 0; ii < adc_active_pin_cnt; ii++) {
+    uint64_t seq_numbers[CONFIG_ADC_ACTIVE_PIN_CNT];
+    for (uint8_t ii = 0; ii < CONFIG_ADC_ACTIVE_PIN_CNT; ii++) {
         seq_numbers[ii] = 0;
         log_trace("Pin %hhi is currently at seq_no %llu", adc_active_pins[ii], seq_numbers[ii]);
     }
@@ -110,8 +115,9 @@ int main(int argc, char** argv) {
         else {
             int32_t sample_cnt_current = io->DRam[0];
             if (sample_cnt_current != sample_cnt_last) {
+#if L_TRACE
                 log_trace("----- New Values -----");
-
+#endif
                 int32_t start_index, end_index;
                 /* Wrap-around handling rb - no wrap-around yet */
                 if (sample_cnt_current > sample_cnt_last) {
@@ -141,7 +147,7 @@ int main(int argc, char** argv) {
 
                 /* Write all new samples into measurements buffer */
                 for (int32_t ii = start_index + 1; ii <= end_index; ii++) {
-                    uint8_t pin_no = ii % adc_active_pin_cnt;
+                    uint8_t pin_no = ii % CONFIG_ADC_ACTIVE_PIN_CNT;
 
                     /* Grab new memory, popuate with new measurement, add to queue */
                     AdcReading* new_reading = (AdcReading*)malloc(sizeof(AdcReading));
@@ -160,7 +166,6 @@ int main(int argc, char** argv) {
                               seq_numbers[pin_no]);
 #endif
 
-                    /* Handling wrap-arounds */
                     /* Wrap-round handling seq_no */
                     if (seq_numbers[pin_no] < (0xFFFFFFFFFFFFFFFF - 1)) {
                         seq_numbers[pin_no]++;
@@ -180,8 +185,10 @@ int main(int argc, char** argv) {
 #endif
                 /* Discard measurements of too many have been pilled up */
                 if (unsent_measurement_cnt >= CONFIG_HOST_ADC_QUEUE_DISCARD) {
+#if L_WARN
                     log_warn("Over %i unsent measurements, discarding",
                              CONFIG_HOST_ADC_QUEUE_DISCARD);
+#endif
                     AdcReading* reading_to_discard = NULL;
                     for (int ii = 0; ii < CONFIG_HOST_ADC_QUEUE_DISCARD; ii++) {
                         rpa_queue_pop(measurements_queue, (void**)&reading_to_discard);
