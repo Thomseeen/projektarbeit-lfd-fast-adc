@@ -178,6 +178,7 @@ int main(int argc, char** argv) {
                     log_debug("%lu unsent measurements in host queue", unsent_measurement_cnt);
                 }
 #endif
+                /* Discard measurements of too many have been pilled up */
                 if (unsent_measurement_cnt >= CONFIG_HOST_ADC_QUEUE_DISCARD) {
                     log_warn("Over %i unsent measurements, discarding",
                              CONFIG_HOST_ADC_QUEUE_DISCARD);
