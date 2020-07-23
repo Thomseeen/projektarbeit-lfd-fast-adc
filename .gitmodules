@@ -1,3 +1,6 @@
 [submodule "lib/log.c"]
 	path = lib/log.c
 	url = https://github.com/rxi/log.c
+[submodule "lib/rpa_queue"]
+	path = lib/rpa_queue
+	url = https://github.com/chrismerck/rpa_queue.git

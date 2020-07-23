@@ -11,7 +11,7 @@
 /* ***** LOG LEVEL ***** */
 
 /* Logger */
-#define TRACE
+#define DEBUG
 /* Paho MQTT */
 //#define MQTT_C_CLIENT_TRACE on
 //#define MQTT_C_CLIENT_TRACE_LEVEL PROTOCOL
@@ -30,17 +30,20 @@
 /* Delay bevore every averaging sequence - cycles @ 24MHz ~= 42ns - 0..0x3FFFF */
 #define CONFIG_ADC_OPEN_DELAY 238  // ~10us
 /* Sampling rate as Tmr [ns] between samples */
-#define CONFIG_ADC_TMR 4000000000  // 4s
+#define CONFIG_ADC_TMR 10000000  // 10us
 /* By how many bits should the 12Bit ADC-values be padded? */
 #define CONFIG_ADC_ENCODING 4  // 16bit
 /* Bit mask for active AIN - LSB is charge up -> ignore, Bit 1 is AIN0, Bit 2 is AIN1, ... */
-#define CONFIG_ADC_PIN_MASK 0b000001100
+#define CONFIG_ADC_PIN_MASK 0b000011110
 /* How many samples to fetch in one go per active AIN before ring buffer wrap around */
 #define CONFIG_ADC_RB_SAMPLES_PER_PORT 10000
 
-/* How big the host buffer of ADC-readings should be (ACTIVE_PINS_CNT x
- * CONFIG_ADC_RB_SAMPLES_PER_PORT is a good idea) */
-#define CONFIG_HOST_ADC_BUFFER_SIZE 20000
+/* At how many unsent values the oldes x should be discarded
+(one value = blob of measurements at the same timestamp of all active adc pins) */
+#define CONFIG_HOST_ADC_QUEUE_DISCARD 100
+/* How big the host queue of ADC-readings should be at max
+   (2xCONFIG_HOST_ADC_QUEUE_DISCARD is a good idea) */
+#define CONFIG_HOST_ADC_QUEUE_MAX_SIZE 200
 
 /* ***** MQTT ***** */
 

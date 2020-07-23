@@ -2,10 +2,9 @@
 
 /* Mutexes */
 pthread_mutex_t log_lock;
-pthread_mutex_t measurements_buffer_lock[CONFIG_HOST_ADC_BUFFER_SIZE];
 
-/* Measurements buffer */
-AdcReading measurements_buffer[CONFIG_HOST_ADC_BUFFER_SIZE];
+/* Measurements FIFO queue */
+rpa_queue_t* measurements_queue;
 
 /********************************************************************************
  * Callback for logger service to obtain lock

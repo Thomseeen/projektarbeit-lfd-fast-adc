@@ -41,6 +41,9 @@ int mqtt_handler_connect(MQTTAsync client) {
 }
 
 int mqtt_handler_send_measurement(void* context, AdcReading* adc_reading) {
+    /* Set status to sending */
+    adc_reading->status = ADC_READ_SENDING;
+
     /* Setup MQTT paho async C client structure */
     MQTTAsync mqtt_client = (MQTTAsync)context;
     MQTTAsync_responseOptions mqtt_conn_opts = MQTTAsync_responseOptions_initializer;
@@ -66,6 +69,9 @@ int mqtt_handler_send_measurement(void* context, AdcReading* adc_reading) {
     log_trace("Sent measurement from pin %hhu with seq_no %llu and %d bytes", adc_reading->pin_no,
               adc_reading->seq_no, sizeof(*adc_reading));
 #endif
+
+    /* Free memory */
+    free(adc_reading);
 
     return MQTTASYNC_SUCCESS;
 }
@@ -108,48 +114,38 @@ void* mqtt_handler(void* arg) {
 
     /* Main loop */
     while (1) {
-        /* Index to keep track were the last value-to-be-sent was found */
-        uint32_t host_adc_buffer_indexer = 0;
         /* Connection established - checking for new data */
         if (mqtt_connection_flag == MQTT_CON_CONNECTED) {
-            /* Some temporary data holders */
-            AdcReading adc_reading;                    // Copy
-            AdcReading* adc_reading_pori = NULL;       // Pointer to original
-            AdcReading* adc_reading_p = &adc_reading;  // Pointer to copy
-            for (; host_adc_buffer_indexer < CONFIG_HOST_ADC_BUFFER_SIZE;
-                 host_adc_buffer_indexer++) {
-                pthread_mutex_lock(&measurements_buffer_lock[host_adc_buffer_indexer]);
-                if (measurements_buffer[host_adc_buffer_indexer].status == ADC_READ_NEW_VALUE) {
-                    measurements_buffer[host_adc_buffer_indexer].status = ADC_READ_GRABBED_FROM_RB;
-                    adc_reading_pori = &measurements_buffer[host_adc_buffer_indexer];
-                    adc_reading = measurements_buffer[host_adc_buffer_indexer];
-                    pthread_mutex_unlock(&measurements_buffer_lock[host_adc_buffer_indexer]);
-                    break;
-                } else {
-                    pthread_mutex_unlock(&measurements_buffer_lock[host_adc_buffer_indexer]);
+            /* Some data holders */
+            AdcReading* adc_reading_p = NULL;  // Pointer to measurement
+
+            /* Grab data or block if non available */
+            if (rpa_queue_size(measurements_queue)) {
+                if (!rpa_queue_pop(measurements_queue, (void**)&adc_reading_p)) {
+                    log_fatal("Error on popping new measurement from queue. Exiting...");
+                    log_info("MQTT Handler thread terminates");
+                    MQTTAsync_destroy(&mqtt_client);
+                    exit(rc);
                 }
-            }
-            /* If no value-to-be-sent was found, start over */
-            if (host_adc_buffer_indexer == CONFIG_HOST_ADC_BUFFER_SIZE) {
-                host_adc_buffer_indexer = 0;
-            }
-            /* New value found, pass to send-function */
-            if (adc_reading.status == ADC_READ_GRABBED_FROM_RB) {
-                adc_reading.status = ADC_READ_SENDING;
-                if (mqtt_handler_send_measurement(mqtt_client, adc_reading_p) !=
-                    MQTTASYNC_SUCCESS) {
-                    /* Could not send because of disconnect, try again */
+                adc_reading_p->status = ADC_READ_GRABBED_FROM_QUEUE;
+
+                /* New value found, pass to send-function */
+                if (adc_reading_p->status == ADC_READ_GRABBED_FROM_QUEUE) {
+                    if (mqtt_handler_send_measurement(mqtt_client, adc_reading_p) !=
+                        MQTTASYNC_SUCCESS) {
+                        /* Could not send because of disconnect, try again */
 #if L_WARN
-                    log_warn("Reset measurement flag to ADC_READ_NEW_VALUE to retry sending");
+                        log_warn(
+                            "Reset measurement flag to ADC_READ_NEW_VALUE and push back into queue "
+                            "to "
+                            "retry sending");
 #endif
-                    pthread_mutex_lock(&measurements_buffer_lock[host_adc_buffer_indexer]);
-                    adc_reading_pori->status = ADC_READ_NEW_VALUE;
-                    pthread_mutex_unlock(&measurements_buffer_lock[host_adc_buffer_indexer]);
-                } else {
-                    /* TODO if meachanism whether actual sent happend */
-                    pthread_mutex_lock(&measurements_buffer_lock[host_adc_buffer_indexer]);
-                    adc_reading_pori->status = ADC_READ_SENT;
-                    pthread_mutex_unlock(&measurements_buffer_lock[host_adc_buffer_indexer]);
+                        adc_reading_p->status = ADC_READ_NEW_VALUE;
+                        if (!rpa_queue_push(measurements_queue, adc_reading_p)) {
+                            log_error("Error on pushing measurement back into queue, discard");
+                            free(adc_reading_p);
+                        }
+                    }
                 }
             }
         } else {
@@ -167,6 +163,7 @@ void* mqtt_handler(void* arg) {
  ********************************************************************************/
 
 void mqtt_handler_delivered(void* context, MQTTAsync_token token) {
+    /* No delivery confirmation on QoS 0 */
 #if L_TRACE
     log_trace("Message with token value %d delivery confirmed", token);
 #endif
