@@ -8,5 +8,5 @@ projektarbeit-lfd-fast-adc
 *example
 
 # Python environment and recordings
-**/venv/
+**/fastadc-tester-venv/
 *.npy
