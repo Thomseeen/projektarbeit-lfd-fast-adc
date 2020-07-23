@@ -143,12 +143,6 @@ int main(int argc, char** argv) {
                 for (int32_t ii = start_index + 1; ii <= end_index; ii++) {
                     uint8_t pin_no = ii % adc_active_pin_cnt;
 
-                    /* TODO: Check whether measurements have been dropped - discard */
-#if L_WARN
-                    if (false) {
-                        log_warn("Dropped measurement");
-                    }
-#endif
                     /* Grab new memory, popuate with new measurement, add to queue */
                     AdcReading* new_reading = (AdcReading*)malloc(sizeof(AdcReading));
                     new_reading->pin_no = adc_active_pins[pin_no];
@@ -178,12 +172,21 @@ int main(int argc, char** argv) {
                 sample_cnt_last = end_index;
 
                 /* Count sample to be sent */
-#if L_DEBUG
                 uint32_t unsent_measurement_cnt = rpa_queue_size(measurements_queue);
+#if L_DEBUG
                 if (unsent_measurement_cnt) {
                     log_debug("%lu unsent measurements in host queue", unsent_measurement_cnt);
                 }
 #endif
+                if (unsent_measurement_cnt >= CONFIG_HOST_ADC_QUEUE_DISCARD) {
+                    log_warn("Over %i unsent measurements, discarding",
+                             CONFIG_HOST_ADC_QUEUE_DISCARD);
+                    AdcReading* reading_to_discard = NULL;
+                    for (int ii = 0; ii < CONFIG_HOST_ADC_QUEUE_DISCARD; ii++) {
+                        rpa_queue_pop(measurements_queue, (void**)&reading_to_discard);
+                        free(reading_to_discard);
+                    }
+                }
             }
         }
     }
