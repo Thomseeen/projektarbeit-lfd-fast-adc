@@ -38,9 +38,12 @@
 /* How many samples to fetch in one go per active AIN before ring buffer wrap around */
 #define CONFIG_ADC_RB_SAMPLES_PER_PORT 10000
 
-/* How big the host buffer of ADC-readings should be (ACTIVE_PINS_CNT x
- * CONFIG_ADC_RB_SAMPLES_PER_PORT is a good idea) */
-#define CONFIG_HOST_ADC_BUFFER_SIZE 20000
+/* At how many unsent values the oldes x should be discarded
+(one value = blob of measurements at the same timestamp of all active adc pins) */
+#define CONFIG_HOST_ADC_QUEUE_DISCARD 50
+/* How big the host queue of ADC-readings should be at max
+   (2xCONFIG_HOST_ADC_QUEUE_DISCARD is a good idea) */
+#define CONFIG_HOST_ADC_QUEUE_MAX_SIZE 100
 
 /* ***** MQTT ***** */
 
