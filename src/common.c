@@ -53,9 +53,9 @@ int init_logger() {
 /********************************************************************************
  * Initialize configuration
  ********************************************************************************/
-int init_config() {
+int init_config(char* filename) {
     cfg = cfg_init(opts, CFGF_NONE);
-    int e = cfg_parse(cfg, "config.conf");
+    int e = cfg_parse(cfg, filename ? filename : "config.conf");
     if (e == CFG_PARSE_ERROR || e == CFG_FILE_ERROR) {
         return 1;
     }
