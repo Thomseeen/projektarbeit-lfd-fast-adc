@@ -21,7 +21,7 @@ void mqtt_handler_on_connect_failure(void* context, MQTTAsync_failureData* respo
 int mqtt_handler_connect(MQTTAsync client) {
     /* Build connection options */
     MQTTAsync_connectOptions mqtt_conn_opts = MQTTAsync_connectOptions_initializer;
-    mqtt_conn_opts.keepAliveInterval = MQTT_KEEP_ALIVE;
+    mqtt_conn_opts.keepAliveInterval = cfg_getint(cfg, "MQTT_KEEP_ALIVE");
     mqtt_conn_opts.cleansession = 1;
 
     /* MQTT paho async C client callbacks for connection */
@@ -55,12 +55,12 @@ int mqtt_handler_send_measurement(void* context, AdcReading* adc_reading) {
     mqtt_pubmsg.payload = adc_reading;
     mqtt_pubmsg.payloadlen = sizeof(*adc_reading);
 
-    mqtt_pubmsg.qos = MQTT_DEFAULT_QOS;
+    mqtt_pubmsg.qos = cfg_getint(cfg, "MQTT_DEFAULT_QOS");
     mqtt_pubmsg.retained = 0;
 
     int rc;
-    if ((rc = MQTTAsync_sendMessage(mqtt_client, MQTT_DEFAULT_TOPIC_PREFIX, &mqtt_pubmsg,
-                                    &mqtt_conn_opts)) != MQTTASYNC_SUCCESS) {
+    if ((rc = MQTTAsync_sendMessage(mqtt_client, cfg_getstr(cfg, "MQTT_DEFAULT_TOPIC_PREFIX"),
+                                    &mqtt_pubmsg, &mqtt_conn_opts)) != MQTTASYNC_SUCCESS) {
         log_error("Failed to start sendMessage, return code %d", rc);
         return MQTTASYNC_FAILURE;
     }
@@ -88,8 +88,9 @@ void* mqtt_handler(void* arg) {
 
     /* Initialize MQTT paho async C client incl. callbacks */
     int rc;
-    if ((rc = MQTTAsync_create(&mqtt_client, MQTT_BROKER_ADDRESS, MQTT_CLIENTID,
-                               MQTTCLIENT_PERSISTENCE_NONE, NULL)) != MQTTASYNC_SUCCESS) {
+    if ((rc = MQTTAsync_create(&mqtt_client, cfg_getstr(cfg, "MQTT_BROKER_ADDRESS"),
+                               cfg_getstr(cfg, "MQTT_CLIENTID"), MQTTCLIENT_PERSISTENCE_NONE,
+                               NULL)) != MQTTASYNC_SUCCESS) {
         mqtt_connection_flag = MQTT_CON_CONNECTION_FAILED;
         log_fatal("... Failed to create MQTT-client, return code %d", rc);
         log_info("MQTT Handler thread terminates");
@@ -209,8 +210,8 @@ void mqtt_handler_on_connect_failure(void* context, MQTTAsync_failureData* respo
 
     log_warn("Failed during connection to MQTT-broker, return code %d",
              response ? response->code : 0);
-    log_info("Retrying in %d seconds", MQTT_RECONNECT_TIMER);
-    sleep(MQTT_RECONNECT_TIMER);
+    log_info("Retrying in %d seconds", cfg_getint(cfg, "MQTT_RECONNECT_TIMER"));
+    sleep(cfg_getint(cfg, "MQTT_RECONNECT_TIMER"));
 
     int rc;
     if ((rc = mqtt_handler_connect(mqtt_client)) != 0) {

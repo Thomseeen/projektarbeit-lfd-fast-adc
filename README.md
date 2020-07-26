@@ -5,5 +5,6 @@ This tool is supposed to be CLI-only and configured via config-files.
 
 Libraries in use:
 * DTJF's libpruio (should be installed globally) - https://github.com/DTJF/libpruio
-* rxi's log.c - https://github.com/rxi/log.c
 * exlipse's paho.mqtt.c (should be installed globally) - https://github.com/eclipse/paho.mqtt.c
+* rxi's log.c (git submodul, symlinked) - https://github.com/rxi/log.c
+* chrismerch's rpa_queue adapted from Apache apr_queue (git submodul, symlinked) - https://github.com/chrismerck/rpa_queue

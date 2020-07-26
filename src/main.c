@@ -6,8 +6,8 @@
 /********************************************************************************
  * Custom functions
  ********************************************************************************/
-void cleanup(pruIo* io, pthread_mutex_t* log_lock, rpa_queue_t* queue) {
-    log_info("Destroying PRUIO driver structure");
+void cleanup(pruIo* io, pthread_mutex_t* log_lock, rpa_queue_t* queue, cfg_t* cfg) {
+    log_info("Destroying all the things");
     pthread_mutex_destroy(log_lock);
     if (io) {
         pruio_destroy(io);
@@ -16,34 +16,50 @@ void cleanup(pruIo* io, pthread_mutex_t* log_lock, rpa_queue_t* queue) {
         rpa_queue_term(queue);
         rpa_queue_destroy(queue);
     }
+    cfg_free(cfg);
 }
 
 /********************************************************************************
  * MAIN
  ********************************************************************************/
 int main(int argc, char** argv) {
-    /* Initialize Logger */
+    /* Initialize mutex for logger */
     if (pthread_mutex_init(&log_lock, NULL) != 0) {
-        log_fatal("Log mutex could not be initialized");
-        cleanup(NULL, &log_lock, measurements_queue);
+        log_fatal("Logger mutex could not be initialized");
+        cleanup(NULL, &log_lock, measurements_queue, cfg);
         exit(EXIT_FAILURE);
     }
 
-    init_logger();
+    /* Initialize logger */
+    if (init_logger()) {
+        log_fatal("Logger could not be initialized");
+        cleanup(NULL, &log_lock, measurements_queue, cfg);
+        exit(EXIT_FAILURE);
+    }
+
+    /* Initialize config structure */
+    if (init_config()) {
+        log_fatal("Configuration could not be initialized");
+        cleanup(NULL, &log_lock, measurements_queue, cfg);
+        exit(EXIT_FAILURE);
+    }
 
     /* Build configuration for pruio */
     uint16_t config_pruio_subsystems;
-    config_pruio_subsystems = CONFIG_PRU_NO ? PRUIO_ACT_PRU1 : 0;
-    config_pruio_subsystems |= CONFIG_SUBSYSTEM_ADC ? PRUIO_ACT_ADC : PRUIO_ACT_ADC;
+    config_pruio_subsystems = cfg_getint(cfg, "CONFIG_PRU_NO") ? PRUIO_ACT_PRU1 : 0;
+    config_pruio_subsystems |=
+        cfg_getint(cfg, "CONFIG_SUBSYSTEM_ADC") ? PRUIO_ACT_ADC : PRUIO_ACT_ADC;
 
-    pruIo* io = pruio_new(config_pruio_subsystems, CONFIG_ADC_AVERAGING_STEPS,
-                          CONFIG_ADC_OPEN_DELAY, CONFIG_ADC_SAMPLE_DELAY);
+    pruIo* io = pruio_new(config_pruio_subsystems, cfg_getint(cfg, "CONFIG_ADC_AVERAGING_STEPS"),
+                          cfg_getint(cfg, "CONFIG_ADC_OPEN_DELAY"),
+                          cfg_getint(cfg, "CONFIG_ADC_SAMPLE_DELAY"));
 
     /* Setup PRUIO driver */
-    if (pruio_config(io, CONFIG_ADC_RB_SAMPLES_PER_PORT, CONFIG_ADC_PIN_MASK, CONFIG_ADC_TMR,
-                     CONFIG_ADC_ENCODING)) {
+    if (pruio_config(io, cfg_getint(cfg, "CONFIG_ADC_RB_SAMPLES_PER_PORT"),
+                     cfg_getint(cfg, "CONFIG_ADC_PIN_MASK"), cfg_getint(cfg, "CONFIG_ADC_TMR"),
+                     cfg_getint(cfg, "CONFIG_ADC_ENCODING"))) {
         log_fatal("PRUIO config failed (%s). Exiting...", io->Errr);
-        cleanup(io, &log_lock, measurements_queue);
+        cleanup(io, &log_lock, measurements_queue, cfg);
         exit(EXIT_FAILURE);
     }
 
@@ -52,21 +68,21 @@ int main(int argc, char** argv) {
     int rc = pthread_create(&mqtt_handler_thread_id, NULL, mqtt_handler, NULL);
     if (rc) {
         log_fatal("Unable to create MQTT-Handler thread, %d. Exiting...", rc);
-        cleanup(io, &log_lock, measurements_queue);
+        cleanup(io, &log_lock, measurements_queue, cfg);
         exit(EXIT_FAILURE);
     }
 
     /* Start rb-mode */
     if (pruio_rb_start(io)) {
         log_fatal("PRUIO rb mode start failed (%s). Exiting...", io->Errr);
-        cleanup(io, &log_lock, measurements_queue);
+        cleanup(io, &log_lock, measurements_queue, cfg);
         exit(EXIT_FAILURE);
     }
 
     /* Setup measurements_queue */
-    if (!rpa_queue_create(&measurements_queue, CONFIG_HOST_ADC_QUEUE_MAX_SIZE)) {
+    if (!rpa_queue_create(&measurements_queue, cfg_getint(cfg, "CONFIG_HOST_ADC_QUEUE_MAX_SIZE"))) {
         log_fatal("Measurements queue could not be initialized. Exiting...");
-        cleanup(io, &log_lock, measurements_queue);
+        cleanup(io, &log_lock, measurements_queue, cfg);
         exit(EXIT_FAILURE);
     }
 
@@ -79,7 +95,7 @@ int main(int argc, char** argv) {
     /* Calculate actual active AIN numbers */
     uint8_t adc_active_pins[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
     for (uint8_t ii = 1, jj = 0; ii <= LFD_MAX_ADC_PINS; ii++) {
-        if ((CONFIG_ADC_PIN_MASK >> ii) & 0xFF1) {
+        if ((cfg_getint(cfg, "CONFIG_ADC_PIN_MASK") >> ii) & 0xFF1) {
             adc_active_pins[jj] = ii - 1;
             jj++;
         }
@@ -179,11 +195,11 @@ int main(int argc, char** argv) {
                 }
 #endif
                 /* Discard measurements of too many have been pilled up */
-                if (unsent_measurement_cnt >= CONFIG_HOST_ADC_QUEUE_DISCARD) {
+                if (unsent_measurement_cnt >= cfg_getint(cfg, "CONFIG_HOST_ADC_QUEUE_DISCARD")) {
                     log_warn("Over %i unsent measurements, discarding",
-                             CONFIG_HOST_ADC_QUEUE_DISCARD);
+                             cfg_getint(cfg, "CONFIG_HOST_ADC_QUEUE_DISCARD"));
                     AdcReading* reading_to_discard = NULL;
-                    for (int ii = 0; ii < CONFIG_HOST_ADC_QUEUE_DISCARD; ii++) {
+                    for (int ii = 0; ii < cfg_getint(cfg, "CONFIG_HOST_ADC_QUEUE_DISCARD"); ii++) {
                         rpa_queue_pop(measurements_queue, (void**)&reading_to_discard);
                         free(reading_to_discard);
                     }
@@ -193,6 +209,6 @@ int main(int argc, char** argv) {
     }
 
     /* Destroy div. elements */
-    cleanup(io, &log_lock, measurements_queue);
+    cleanup(io, &log_lock, measurements_queue, cfg);
     exit(EXIT_SUCCESS);
 }
