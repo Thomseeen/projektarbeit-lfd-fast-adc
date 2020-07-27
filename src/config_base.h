@@ -7,7 +7,7 @@
 /********************************************************************************
  * Manifest
  ********************************************************************************/
-#define VERSION "1.0.0"
+#define VERSION "1.0.1"
 
 /********************************************************************************
  * CONFIGURABLE PART
@@ -16,7 +16,7 @@
 /* ***** LOG LEVEL ***** */
 
 /* Logger */
-#define DEBUG
+#define INFO
 /* Paho MQTT */
 //#define MQTT_C_CLIENT_TRACE on
 //#define MQTT_C_CLIENT_TRACE_LEVEL PROTOCOL

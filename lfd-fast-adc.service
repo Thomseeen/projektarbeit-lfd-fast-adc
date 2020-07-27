@@ -1,0 +1,13 @@
+[Unit]
+Description=Fast BBB ADC sampling and MQTT publishing v1.0.1
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=lfd
+Group=lfd
+WorkingDirectory=/home/lfd/Projects/projektarbeit-lfd-fast-adc/
+ExecStart=/home/lfd/Projects/projektarbeit-lfd-fast-adc/projektarbeit-lfd-fast-adc -c user_lfd-fast-adc.conf
+
+[Install]
+WantedBy=multi-user.target
