@@ -72,6 +72,11 @@ int main(int argc, char** argv) {
             exit(EXIT_FAILURE);
         }
 
+        /* Some inital messages */
+        log_info("Started lfd-fast-adc Version %s\n", VERSION);
+        log_info("Publishing as %s to %s\n\n", cfg_getstr(cfg, "MQTT_CLIENTID"),
+                 cfg_getstr(cfg, "MQTT_DEFAULT_TOPIC_PREFIX"));
+
         /* Build configuration for pruio */
         uint16_t config_pruio_subsystems;
         config_pruio_subsystems = cfg_getint(cfg, "CONFIG_PRU_NO") ? PRUIO_ACT_PRU1 : 0;

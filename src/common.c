@@ -7,26 +7,27 @@ pthread_mutex_t log_lock;
 rpa_queue_t* measurements_queue;
 
 /* Config structure */
-cfg_opt_t opts[] = {CFG_INT("CONFIG_LOGGER_LOG2FILE", 0, CFGF_NONE),
-                    CFG_STR("CONFIG_LOGGER_LOGFILE", "/var/log/lfd-fast-adc/log_%s", CFGF_NONE),
-                    CFG_INT("CONFIG_PRU_NO", 1, CFGF_NONE),
-                    CFG_INT("CONFIG_SUBSYSTEM_ADC", 1, CFGF_NONE),
-                    CFG_INT("CONFIG_ADC_AVERAGING_STEPS", 1, CFGF_NONE),
-                    CFG_INT("CONFIG_ADC_SAMPLE_DELAY", 24, CFGF_NONE),
-                    CFG_INT("CONFIG_ADC_OPEN_DELAY", 238, CFGF_NONE),
-                    CFG_INT("CONFIG_ADC_TMR", 1000000000, CFGF_NONE),
-                    CFG_INT("CONFIG_ADC_ENCODING", 4, CFGF_NONE),
-                    CFG_INT("CONFIG_ADC_PIN_MASK", 0b000000010, CFGF_NONE),
-                    CFG_INT("CONFIG_ADC_RB_SAMPLES_PER_PORT", 1000, CFGF_NONE),
-                    CFG_INT("CONFIG_HOST_ADC_QUEUE_DISCARD", 100, CFGF_NONE),
-                    CFG_INT("CONFIG_HOST_ADC_QUEUE_MAX_SIZE", 200, CFGF_NONE),
-                    CFG_STR("MQTT_BROKER_ADDRESS", "tcp://192.168.178.16:1883", CFGF_NONE),
-                    CFG_STR("MQTT_CLIENTID", "lfd-slave-1", CFGF_NONE),
-                    CFG_STR("MQTT_DEFAULT_TOPIC_PREFIX", "lfd/adc", CFGF_NONE),
-                    CFG_INT("MQTT_DEFAULT_QOS", 0, CFGF_NONE),
-                    CFG_INT("MQTT_KEEP_ALIVE", 30, CFGF_NONE),
-                    CFG_INT("MQTT_RECONNECT_TIMER", 5, CFGF_NONE),
-                    CFG_END()};
+cfg_opt_t opts[] = {
+    CFG_INT("CONFIG_LOG_LOG2FILE", 0, CFGF_NONE),
+    CFG_STR("CONFIG_LOG_LOGFILE", "/var/log/lfd-fast-adc/log_%Y-%m-%d_%H:%M:%S.log", CFGF_NONE),
+    CFG_INT("CONFIG_PRU_NO", 1, CFGF_NONE),
+    CFG_INT("CONFIG_SUBSYSTEM_ADC", 1, CFGF_NONE),
+    CFG_INT("CONFIG_ADC_AVERAGING_STEPS", 1, CFGF_NONE),
+    CFG_INT("CONFIG_ADC_SAMPLE_DELAY", 24, CFGF_NONE),
+    CFG_INT("CONFIG_ADC_OPEN_DELAY", 238, CFGF_NONE),
+    CFG_INT("CONFIG_ADC_TMR", 1000000000, CFGF_NONE),
+    CFG_INT("CONFIG_ADC_ENCODING", 4, CFGF_NONE),
+    CFG_INT("CONFIG_ADC_PIN_MASK", 0b000000010, CFGF_NONE),
+    CFG_INT("CONFIG_ADC_RB_SAMPLES_PER_PORT", 1000, CFGF_NONE),
+    CFG_INT("CONFIG_HOST_ADC_QUEUE_DISCARD", 100, CFGF_NONE),
+    CFG_INT("CONFIG_HOST_ADC_QUEUE_MAX_SIZE", 200, CFGF_NONE),
+    CFG_STR("MQTT_BROKER_ADDRESS", "tcp://192.168.178.16:1883", CFGF_NONE),
+    CFG_STR("MQTT_CLIENTID", "lfd-slave-1", CFGF_NONE),
+    CFG_STR("MQTT_DEFAULT_TOPIC_PREFIX", "lfd/adc", CFGF_NONE),
+    CFG_INT("MQTT_DEFAULT_QOS", 0, CFGF_NONE),
+    CFG_INT("MQTT_KEEP_ALIVE", 30, CFGF_NONE),
+    CFG_INT("MQTT_RECONNECT_TIMER", 5, CFGF_NONE),
+    CFG_END()};
 cfg_t* cfg;
 
 /********************************************************************************
@@ -50,22 +51,17 @@ int init_logger() {
     /* Set up mutex for logger service */
     log_set_udata(&log_lock);
     log_set_lock(lock_callback);
-    if (cfg_getint(cfg, "CONFIG_LOGGER_LOG2FILE")) {
+    if (cfg_getint(cfg, "CONFIG_LOG_LOG2FILE")) {
         /* Open file to log to */
         /* Get time */
-        time_t rawtime;
+        time_t rawtime = time(NULL);
+        struct tm* timenow = gmtime(&rawtime);
         char buffer[255];
-        time(&rawtime);
+
         /* Add time to pathstring */
-        if (sprintf(buffer, cfg_getstr(cfg, "CONFIG_LOGGER_LOGFILE"), ctime(&rawtime)) < 0) {
+        if (strftime(buffer, sizeof(buffer), cfg_getstr(cfg, "CONFIG_LOG_LOGFILE"), timenow) < 0) {
             log_error("Could not create log file name");
             return 1;
-        }
-        /* Convert space to underscore */
-        char* p = buffer;
-        for (; *p; ++p) {
-            if (*p == ' ')
-                *p = '_';
         }
 
         /* Open file to log to */
