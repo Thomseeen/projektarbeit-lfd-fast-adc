@@ -80,8 +80,6 @@ int mqtt_handler_send_measurement(void* context, AdcReading* adc_reading) {
  * Main handler function
  ********************************************************************************/
 void* mqtt_handler(void* arg) {
-    init_logger();
-
     log_info("MQTT Handler thread has been started");
     /* Setup MQTT paho async C client structure */
     MQTTAsync mqtt_client;

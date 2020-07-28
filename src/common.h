@@ -9,7 +9,9 @@
 #include <confuse.h>
 #include <inttypes.h>  // fixed size types
 #include <pthread.h>   // threads
+#include <stdio.h>     // print and sprintf
 #include <stdlib.h>    // error handling
+#include <time.h>      // time
 #include <unistd.h>    // sleep/usleep
 
 #include "adc_reading.h"

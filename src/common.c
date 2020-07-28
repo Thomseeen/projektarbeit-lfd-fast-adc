@@ -7,7 +7,9 @@ pthread_mutex_t log_lock;
 rpa_queue_t* measurements_queue;
 
 /* Config structure */
-cfg_opt_t opts[] = {CFG_INT("CONFIG_PRU_NO", 1, CFGF_NONE),
+cfg_opt_t opts[] = {CFG_INT("CONFIG_LOGGER_LOG2FILE", 0, CFGF_NONE),
+                    CFG_STR("CONFIG_LOGGER_LOGFILE", "/var/log/lfd-fast-adc/log_%s", CFGF_NONE),
+                    CFG_INT("CONFIG_PRU_NO", 1, CFGF_NONE),
                     CFG_INT("CONFIG_SUBSYSTEM_ADC", 1, CFGF_NONE),
                     CFG_INT("CONFIG_ADC_AVERAGING_STEPS", 1, CFGF_NONE),
                     CFG_INT("CONFIG_ADC_SAMPLE_DELAY", 24, CFGF_NONE),
@@ -42,12 +44,42 @@ static void lock_callback(void* udata, int lock) {
  * Initialize logger service with mutex
  ********************************************************************************/
 int init_logger() {
+    int err = 0;
     /* Set logger level */
     log_set_level(LOG_LEVEL);
     /* Set up mutex for logger service */
     log_set_udata(&log_lock);
     log_set_lock(lock_callback);
-    return 0;  // Has no actual error handling
+    if (cfg_getint(cfg, "CONFIG_LOGGER_LOG2FILE")) {
+        /* Open file to log to */
+        /* Get time */
+        time_t rawtime;
+        char buffer[255];
+        time(&rawtime);
+        /* Add time to pathstring */
+        if (sprintf(buffer, cfg_getstr(cfg, "CONFIG_LOGGER_LOGFILE"), ctime(&rawtime)) < 0) {
+            log_error("Could not create log file name");
+            return 1;
+        }
+        /* Convert space to underscore */
+        char* p = buffer;
+        for (; *p; ++p) {
+            if (*p == ' ')
+                *p = '_';
+        }
+
+        /* Open file to log to */
+        log_info("Logging to file %s", buffer);
+        FILE* log_file;
+        log_file = fopen(buffer, "w");
+        if (log_file == NULL) {
+            err = 1;
+            log_error("Could not open log file");
+        } else {
+            log_set_fp(log_file);
+        }
+    }
+    return err;
 }
 
 /********************************************************************************

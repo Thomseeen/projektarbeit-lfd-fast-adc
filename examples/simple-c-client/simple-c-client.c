@@ -13,7 +13,7 @@ gcc -Wall -o c-example simple-c-client.c -l paho-mqtt3c -l paho-mqtt3a
 
 #define ADDRESS "tcp://192.168.178.16:1883"
 #define CLIENTID "mfd-c"
-#define TOPIC "lfd/#"
+#define TOPIC "lfd1/#"
 #define QOS 0
 #define KEEP_ALIVE 30  // s
 

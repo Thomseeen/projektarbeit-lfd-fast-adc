@@ -1,5 +1,5 @@
 [Unit]
-Description=Fast BBB ADC sampling and MQTT publishing v1.0.1
+Description=Fast BBB ADC sampling and MQTT publishing v1.0.2
 After=network-online.target
 Wants=network-online.target
 

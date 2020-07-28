@@ -51,6 +51,13 @@ int main(int argc, char** argv) {
     }
 
     if (!stop) {
+        /* Initialize config structure */
+        if (init_config(config_filename)) {
+            log_fatal("Configuration could not be initialized");
+            cleanup(NULL, &log_lock, measurements_queue, cfg);
+            exit(EXIT_FAILURE);
+        }
+
         /* Initialize mutex for logger */
         if (pthread_mutex_init(&log_lock, NULL) != 0) {
             log_fatal("Logger mutex could not be initialized");
@@ -61,13 +68,6 @@ int main(int argc, char** argv) {
         /* Initialize logger */
         if (init_logger()) {
             log_fatal("Logger could not be initialized");
-            cleanup(NULL, &log_lock, measurements_queue, cfg);
-            exit(EXIT_FAILURE);
-        }
-
-        /* Initialize config structure */
-        if (init_config(config_filename)) {
-            log_fatal("Configuration could not be initialized");
             cleanup(NULL, &log_lock, measurements_queue, cfg);
             exit(EXIT_FAILURE);
         }
