@@ -11,3 +11,6 @@ dist/
 # Python environment and recordings
 **/fastadc-tester-venv/
 *.npy
+
+# User configuration
+user_lfd-fast-adc.conf
