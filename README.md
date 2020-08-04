@@ -1,7 +1,7 @@
 # Super fast BeagleBone Black ADC
-Supposed to be part of my "Projektarbeit" this tool should be able to sample the BBB's ADC-channels in a very tightly timed manner.
-Analog readings will then be published using MQTT (and maybe to shared memory for other C/C++ application on the same host).
-This tool is supposed to be CLI-only and configured via config-files.
+Part of my "Projektarbeit" this tool is able to sample the BBB's ADC-channels in a very tightly timed manner.
+Analog readings will then be published using MQTT. This tool is CLI-only and configured via config-files.
+The provided unit file expects a copy of `example_lfd-fast-adc.conf` as `user_lfd-fast-adc.conf` to be provided.
 
 Libraries in use:
 * DTJF's libpruio (should be installed as global lib) - https://github.com/DTJF/libpruio
