@@ -1,13 +1,16 @@
 [Unit]
 Description=Fast BBB ADC sampling and MQTT publishing v1.1.0
-After=network-online.target
-Wants=network-online.target
+After=network-online.target libpruio-lkm.service
+Wants=network.target network-online.target libpruio-lkm.service
 
 [Service]
 User=lfd
 Group=lfd
 WorkingDirectory=/home/lfd/Projects/projektarbeit-lfd-fast-adc/
-ExecStart=/home/lfd/Projects/projektarbeit-lfd-fast-adc/projektarbeit-lfd-fast-adc -c user_lfd-fast-adc.conf
+ExecStart=/home/lfd/Projects/projektarbeit-lfd-fast-adc/start.sh
+ExecStop=/bin/kill -9 $MAINPID
+RestartSec=15
+Restart=always
 
 [Install]
 WantedBy=multi-user.target
