@@ -8,6 +8,13 @@ projektarbeit-lfd-fast-adc
 *example
 dist/
 
+# Visual Studio artifacts
+**/.vs
+**/x64
+*.editorconfig
+*.dll
+
+
 # Python environment and recordings
 **/fastadc-tester-venv/
 *.npy
