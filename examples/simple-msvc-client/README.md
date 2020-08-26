@@ -8,10 +8,10 @@
   2. Open MSBuild Command Prompt
   3. Navigate to paho.mqtt.c sources (`<paho.mqtt.c-sources>`)
   4.
-  '''
+  ```
   > cmake -Bbuild -H. -DCMAKE_INSTALL_PREFIX=<paho-c-install-path>
   > cmake --build build/ --target install
-  '''
+  ```
   5. Clone/Download https://github.com/eclipse/paho.mqtt.cpp
   6. Open CMake-GUI
   7. Select paho.mqtt.cpp sources (`<paho.mqtt.cpp-sources>`) as source code
